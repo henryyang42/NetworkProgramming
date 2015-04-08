@@ -21,7 +21,7 @@ typedef struct sockaddr SA;
 void sig_chld(int signo) {
     pid_t pid;
     int stat;
-    pid = wait(&stat);
+    while(waitpid((pid_t)(-1), 0, WNOHANG) > 0){}
     printf("child %d terminated\n", pid);
     return;
 }
@@ -67,6 +67,7 @@ int main(int argc, char **argv) {
             exit (0);
         }
         close(connfd);
+        int stat;
         /* parent closes connected socket */
     }
     return 0;
