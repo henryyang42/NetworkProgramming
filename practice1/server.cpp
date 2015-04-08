@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
         } else {
             waitpid(pid, NULL, 0);
             printf("\nnetstat finished!!\n\n");
-            printf("IP address is: %s\n", inet_ntoa(client_addr.sin_addr));
+            printf("IP address is: %s, ", inet_ntoa(client_addr.sin_addr));
             printf("port is: %d\n", (int) ntohs(client_addr.sin_port));
             puts("=========================================");
             close(connfd);
