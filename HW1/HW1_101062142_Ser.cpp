@@ -58,6 +58,7 @@ string server_cmd(string cmd_str, int sockfd) {
         }
         printf("Total %d bytes sent.\n", totalbytes);
         fclose(fp);
+        usleep(50000);
         return "Transfer file " + cmd[1] + " done.";
     } else if (cmd[0] == "cd") {
         if (cmd[1] == "")
