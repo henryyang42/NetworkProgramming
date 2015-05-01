@@ -1,22 +1,62 @@
 #include "HW1.h"
+vector<string> files;
+string server_path = "", temp_path;
 
-void sig_chld(int signo) {
-    pid_t pid;
-    int stat;
-    pid = wait(&stat);
-    printf("child %d terminated\n", pid);
-    return;
+string server_cmd(string cmd_str) {
+    string cmd[10];
+    for (int i = 0; i < 10; i++)
+        cmd[i] = "";
+    int tok_ct = 0;
+    stringstream ss;
+    ss << cmd_str;
+    while (ss >> cmd[tok_ct++]);
+
+    if (cmd[0] == "exit") {
+
+    } else if (cmd[0] == "put") {
+
+    } else if (cmd[0] == "get") {
+
+    } else if (cmd[0] == "cd") {
+        if (cmd[1] == "")
+            cmd[1] = ".";
+        temp_path = server_path + cmd[1];
+        files = get_dir(temp_path.c_str());
+        if (files.size()) {
+            server_path += cmd[1] + (cmd[1][cmd[1].length()-1] == '/' ? "" : "/");
+            return exec("echo $(cd " + server_path + "; pwd)");
+        } else {
+            return "Invalud path.";
+        }
+    } else if (cmd[0] == "ls") {
+        if (cmd[1] == "")
+            cmd[1] = ".";
+        temp_path = server_path + cmd[1];
+        files = get_dir(temp_path.c_str());
+        return files2string(files);
+    }
+    return "Server error";
 }
 
-void str_echo(int sockfd) {
+
+void str_echo(int sockfd, sockaddr_in addr) {
     ssize_t n;
-    char buf[MAXLINE]; //MAXLINE is defined by user
+    char buf[MAXLINE];
 again:
-    while ((n = read(sockfd, buf, MAXLINE)) > 0)
-        write(sockfd, buf, n);
-    if (n < 0 && errno == EINTR) /* interrupted by a signal before any data was read*/ goto again; //ignore EINTR
+    while ((n = read(sockfd, buf, MAXLINE)) > 0) {
+        printf("GET: %s\n", buf);
+        string resp = server_cmd(string(buf));
+        fflush(stdout);
+        write(sockfd, resp.c_str(), resp.length());
+        memset(buf, 0, sizeof(buf));
+    }
+    if (n < 0 && errno == EINTR)
+        goto again;
     else if (n < 0)
-        printf("str_echo: read error");
+        puts("str_echo: read error");
+
+    printf("EXIT-> ");
+    print_ip_port(addr);
 }
 
 int main(int argc, char **argv) {
@@ -24,30 +64,22 @@ int main(int argc, char **argv) {
     struct sockaddr_in servaddr, client_addr;
     char buff[MAXLINE];
 
-    bzero(&servaddr, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    /*for any interface on server */
-    servaddr.sin_port = htons(atoi(argv[1]));
-    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (argc != 2) {
+        puts("Usage: ./HW1_101062142_Ser port");
+        return 0;
+    }
 
-    bind(listenfd, (SA *)&servaddr, sizeof(servaddr));
-
-    listen(listenfd, LISTENQ);
-    bzero(&client_addr, sizeof(client_addr));
-
-    signal(SIGCHLD, sig_chld);
-
+    mkdir(UPLOAD, S_IRWXU);
+    listenfd = listen2fd(servaddr, atoi(argv[1]));
 
     while (1) {
         int addr_len = sizeof(client_addr);
         connfd = accept(listenfd, (SA *)&client_addr, (socklen_t *)&addr_len);
-        printf("IP address is: %s, ", inet_ntoa(client_addr.sin_addr));
-        printf("port is: %d\n", (int) ntohs(client_addr.sin_port));
-        pid_t pid;
-        if ((pid = fork()) == 0) { /* child process */
+        printf("CONNECT-> ");
+        print_ip_port(client_addr);
+        if (fork() == 0) { /* child process */
             close(listenfd); /* close listening socket */
-            str_echo(connfd); /* process the request */
+            str_echo(connfd, client_addr); /* process the request */
             exit (0);
         }
         close(connfd);
