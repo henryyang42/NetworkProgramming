@@ -82,9 +82,6 @@ void client_cmd(string cmd_str) {
         }
         puts("done.");
         fclose(fp);
-        memset(buf, 0, sizeof(buf));
-        //read(sockfd, buf, MAXLINE);
-        //puts(buf);
     } else if (cmd[0] == "cd") {
         send_cmd(cmd_str.c_str());
     } else if (cmd[0] == "ls") {

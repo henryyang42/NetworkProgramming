@@ -38,7 +38,7 @@ string server_cmd(string cmd_str, int sockfd) {
         return "Transfer file " + cmd[1] + " done.";
     } else if (cmd[0] == "get") {
         filename = server_path + cmd[1];
-        if (lstat(filename.c_str(), &filestat) < 0 || (fp = fopen(filename.c_str(), "rb")) == 0) {
+        if (cmd[1] == "" || lstat(filename.c_str(), &filestat) < 0 || (fp = fopen(filename.c_str(), "rb")) == 0) {
             resp = "Server file error.";
             write(sockfd, resp.c_str(), resp.length());
             usleep(100);
@@ -83,7 +83,7 @@ string server_cmd(string cmd_str, int sockfd) {
 
 void str_echo(int sockfd, sockaddr_in addr) {
     ssize_t n;
-    char buf[MAXLINE];
+    char buf[MAXLINE] = {};
 again:
     while ((n = read(sockfd, buf, MAXLINE)) > 0) {
         printf("GET: %s\n", buf);
