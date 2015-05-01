@@ -41,12 +41,15 @@ string server_cmd(string cmd_str, int sockfd) {
         if (lstat(filename.c_str(), &filestat) < 0 || (fp = fopen(filename.c_str(), "rb")) == 0) {
             resp = "Server file error.";
             write(sockfd, resp.c_str(), resp.length());
+            usleep(100);
             return "-1";
         }
         resp = "Server transfering file...";
         write(sockfd, resp.c_str(), resp.length());
+        usleep(100);
         resp = to_string(filestat.st_size);
         write(sockfd, resp.c_str(), resp.length());
+        usleep(100);
         totalbytes = 0;
         while (!feof(fp)) {
             numbytes = fread(buf, sizeof(char), sizeof(buf), fp);
@@ -55,6 +58,7 @@ string server_cmd(string cmd_str, int sockfd) {
         }
         printf("Total %d bytes sent.\n", totalbytes);
         fclose(fp);
+        return "Transfer file " + cmd[1] + " done.";
     } else if (cmd[0] == "cd") {
         if (cmd[1] == "")
             cmd[1] = ".";
@@ -103,7 +107,7 @@ int main(int argc, char **argv) {
     char buff[MAXLINE];
 
     if (argc != 2) {
-        puts("Usage: ./HW1_101062142_Ser port");
+        puts("Usage: ./HW1_101062142_Ser [port]");
         return 0;
     }
 

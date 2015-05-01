@@ -49,7 +49,7 @@ void client_cmd(string cmd_str) {
         exit(0);
     } else if (cmd[0] == "put") {
         filename = client_path + cmd[1];
-        if (lstat(filename.c_str(), &filestat) < 0 || (fp = fopen(filename.c_str(), "rb")) == 0) {
+        if (cmd[1] == "" || lstat(filename.c_str(), &filestat) < 0 || (fp = fopen(filename.c_str(), "rb")) == 0) {
             puts("File error.");
             return;
         }
@@ -70,7 +70,7 @@ void client_cmd(string cmd_str) {
         memset(buf, 0, sizeof(buf));
         read(sockfd, buf, MAXLINE);
         totalbytes = atoi(buf);
-        if (totalbytes < 0 || (fp = fopen((string(DOWNLOAD) + "/" + cmd[1]).c_str(), "wb")) == NULL) {
+        if (cmd[1] == "" || totalbytes < 0 || (fp = fopen((string(DOWNLOAD) + "/" + cmd[1]).c_str(), "wb")) == NULL) {
             puts("File error.");
             return;
         }
@@ -82,7 +82,9 @@ void client_cmd(string cmd_str) {
         }
         puts("done.");
         fclose(fp);
-        cout << "Download file " + cmd[1] + " done." << endl;
+        memset(buf, 0, sizeof(buf));
+        //read(sockfd, buf, MAXLINE);
+        //puts(buf);
     } else if (cmd[0] == "cd") {
         send_cmd(cmd_str.c_str());
     } else if (cmd[0] == "ls") {
@@ -115,7 +117,7 @@ int main (int argc, char **argv) {
     struct sockaddr_in servaddr;
     string cmd_str;
     if (argc != 3) {
-        puts("Usage: ./HW1_101062142_Cli <IPaddress> port");
+        puts("Usage: ./HW1_101062142_Cli [IP] [port]");
         return 0;
     }
 
