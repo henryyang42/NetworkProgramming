@@ -15,8 +15,10 @@ int connect2fd(struct sockaddr_in &addr, char *ip, int port) {
     // Port
     addr.sin_port = htons(port);
 
-    if (connect(sockfd, (SA *) &addr, sizeof(addr)) < 0)
+    if (connect(sockfd, (SA *) &addr, sizeof(addr)) < 0) {
         printf("connect error");
+        exit(0);
+    }
 
     return sockfd;
 }
@@ -35,8 +37,10 @@ int listen2fd(struct sockaddr_in &addr, int port) {
     // Port
     addr.sin_port = htons(port);
 
-    if (bind(sockfd, (SA *)&addr, sizeof(addr)) < 0)
+    if (bind(sockfd, (SA *)&addr, sizeof(addr)) < 0) {
         puts("bind error");
+        exit(0);
+    }
     listen(sockfd, LISTENQ);
 
     return sockfd;
@@ -56,7 +60,7 @@ string files2string(vector<string> files) {
             if (i != 2 && i % 5 == 2)
                 buffer << "\n";
         }
-        return buffer.str()+"\n";
+        return buffer.str() + "\n";
     } else {
         return "Path not found.\n";
     }
@@ -83,8 +87,8 @@ string exec(string cmd) {
     if (!pipe) return "ERROR";
     char buffer[128];
     std::string result = "";
-    while(!feof(pipe)) {
-        if(fgets(buffer, 128, pipe) != NULL)
+    while (!feof(pipe)) {
+        if (fgets(buffer, 128, pipe) != NULL)
             result += buffer;
     }
     pclose(pipe);

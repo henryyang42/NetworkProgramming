@@ -2,7 +2,7 @@
 using namespace std;
 int sockfd;
 vector<string> files;
-string client_path = "", temp_path;
+string client_path = "", temp_path, filename;
 
 void send_cmd(const char* sendline) {
     char recvline[MAXLINE] = {};
@@ -16,6 +16,22 @@ void send_cmd(const char* sendline) {
     puts(recvline);
 }
 
+void help(){
+    puts("put <filename>: upload file to remote");
+    puts("get <filename>: download file from remote");
+    puts("ls  <path>: list remote file");
+    puts("cd  <path>: change remote directory");
+    puts("lls <path>: list local file");
+    puts("lcd <path>: change local directory");
+    puts("clear: clear the terminal screen");
+    puts("help: show help info");
+    puts("exit: terminate the program");
+}
+
+struct stat filestat;
+FILE *fp;
+char buf[MAXLINE];
+int numbytes, totalbytes;
 void client_cmd(string cmd_str) {
     string cmd[10];
     for (int i = 0; i < 10; i++)
@@ -32,9 +48,41 @@ void client_cmd(string cmd_str) {
         puts("Exit successfully.");
         exit(0);
     } else if (cmd[0] == "put") {
-        send_cmd(cmd_str.c_str());
+        filename = client_path + cmd[1];
+        if (lstat(filename.c_str(), &filestat) < 0 || (fp = fopen(filename.c_str(), "rb")) == 0) {
+            puts("File error.");
+            return;
+        }
+        send_cmd(("put " + cmd[1] + " " + to_string(filestat.st_size)).c_str());
+        totalbytes = 0;
+        while (!feof(fp)) {
+            numbytes = fread(buf, sizeof(char), sizeof(buf), fp);
+            numbytes = write(sockfd, buf, numbytes);
+            totalbytes += numbytes;
+        }
+        printf("Total %d bytes sent.\n", totalbytes);
+        fclose(fp);
+        memset(buf, 0, sizeof(buf));
+        read(sockfd, buf, MAXLINE);
+        puts(buf);
     } else if (cmd[0] == "get") {
         send_cmd(cmd_str.c_str());
+        memset(buf, 0, sizeof(buf));
+        read(sockfd, buf, MAXLINE);
+        totalbytes = atoi(buf);
+        if (totalbytes < 0 || (fp = fopen((string(DOWNLOAD) + "/" + cmd[1]).c_str(), "wb")) == NULL) {
+            puts("File error.");
+            return;
+        }
+        printf("Reciving %d bytes...", totalbytes);
+        while (totalbytes > 0) {
+            numbytes = read(sockfd, buf, sizeof(buf));
+            totalbytes -= numbytes;
+            numbytes = fwrite(buf, sizeof(char), numbytes, fp);
+        }
+        puts("done.");
+        fclose(fp);
+        cout << "Download file " + cmd[1] + " done." << endl;
     } else if (cmd[0] == "cd") {
         send_cmd(cmd_str.c_str());
     } else if (cmd[0] == "ls") {
@@ -45,7 +93,7 @@ void client_cmd(string cmd_str) {
         temp_path = client_path + cmd[1];
         files = get_dir(temp_path.c_str());
         if (files.size()) {
-            client_path += cmd[1] + (cmd[1][cmd[1].length()-1] == '/' ? "" : "/");
+            client_path += cmd[1] + (cmd[1][cmd[1].length() - 1] == '/' ? "" : "/");
             cout << exec("echo $(cd " + client_path + "; pwd)") << endl;
         }
     } else if (cmd[0] == "lls") {
@@ -57,7 +105,7 @@ void client_cmd(string cmd_str) {
     } else if (cmd[0] == "clear") {
         system("clear");
     } else if (cmd[0] == "help") {
-
+        help();
     } else {
         printf("Command not found.\n");
     }
@@ -73,6 +121,8 @@ int main (int argc, char **argv) {
 
     mkdir(DOWNLOAD, S_IRWXU);
     sockfd = connect2fd(servaddr, argv[1], atoi(argv[2]));
+
+    help();
 
     while (printf(">>> "), getline(cin, cmd_str)) {
         client_cmd(cmd_str);

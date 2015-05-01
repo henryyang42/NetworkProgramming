@@ -23,7 +23,7 @@
 #include <iostream>
 
 #define LISTENQ 1024
-#define MAXLINE 10000
+#define MAXLINE 2048
 
 using namespace std;
 
