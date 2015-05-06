@@ -5,6 +5,8 @@ int rc;
 
 int main(int argc, char **argv) {
     int sockfd;
+    int nready, client[FD_SETSIZE];
+    fd_set rset, allset;
     struct sockaddr_in servaddr, cliaddr;
     if (argc != 2) {
         puts("Usage: ./HW2_101062142_Ser [port]");

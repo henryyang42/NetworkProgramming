@@ -39,10 +39,9 @@ int udp_ser(struct sockaddr_in &servaddr, int port) {
 
 void dg_echo(int sockfd, SA *pcliaddr, socklen_t clilen) {
     int n;
-    socklen_t len;
-    char mesg[MAXLINE];
+    socklen_t len = clilen;;
+    char mesg[MAXLINE+1];
     while (1) {
-        len = clilen;
         n = recvfrom(sockfd, mesg, MAXLINE, 0, pcliaddr, &len);
         mesg[n] = 0;
         print_ip_port(*(struct sockaddr_in*)pcliaddr);

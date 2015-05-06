@@ -51,7 +51,7 @@ int main (int argc, char **argv) {
         servaddr.sin_family = AF_INET; /*IPv4*/
         servaddr.sin_port = htons(atoi(argv[3])); /*Port*/
         if (inet_pton(AF_INET, argv[2], &servaddr.sin_addr) <= 0)
-            printf("inet_ption error for %s\n", argv[2m]);
+            printf("inet_ption error for %s\n", argv[2]);
 
         if (connect(sockfd, (SA *) &servaddr, sizeof(servaddr)) < 0)
             printf("connect error\n");

@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
         if (FD_ISSET(udpfd, &rset)) {
             len = sizeof(cliaddr);
             n = recvfrom(udpfd, mesg, MAXLINE, 0, (struct sockaddr *) &cliaddr, &len);
-
+            puts("udp");
             sendto(udpfd, mesg, n, 0, (struct sockaddr *) &cliaddr, len);
         }
     }
