@@ -30,7 +30,9 @@ client
 server
 HW*_101062142_Ser
 HW*_101062142_Cli
+sqlite3
 
 # Homework Generate Things
 Download
 Upload
+*.db

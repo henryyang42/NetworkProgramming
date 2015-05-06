@@ -32,19 +32,16 @@ int udp_ser(struct sockaddr_in &servaddr, int port) {
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     servaddr.sin_port = htons(port);
 
-    if (bind(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
-        puts("bind error");
-        exit(0);
-    }
+    bind(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
 
     return sockfd;
 }
 
-void dg_echo(int sockfd, SA *pcliaddr, socklen_t clilen){
+void dg_echo(int sockfd, SA *pcliaddr, socklen_t clilen) {
     int n;
     socklen_t len;
     char mesg[MAXLINE];
-    while(1){
+    while (1) {
         len = clilen;
         n = recvfrom(sockfd, mesg, MAXLINE, 0, pcliaddr, &len);
         mesg[n] = 0;
@@ -57,7 +54,7 @@ void dg_echo(int sockfd, SA *pcliaddr, socklen_t clilen){
 string send_to_server(int sockfd, struct sockaddr_in &servaddr, string s) {
     int n;
     const char *sendline = s.c_str();
-    char recvline[MAXLINE+1];
+    char recvline[MAXLINE + 1];
     sendto(sockfd, sendline, strlen(sendline), 0, (SA*)&servaddr, sizeof(servaddr));
     n = recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
     recvline[n] = 0;
@@ -75,8 +72,50 @@ vector<string> strtok(string s) {
     vector<string> l;
     stringstream ss;
     ss << s;
-    while(ss >> s)
+    while (ss >> s)
         l.push_back(s);
     return l;
 }
 
+// Sqlite3
+const char init_SQL[10][100] = {
+    // Create account table in database
+    "CREATE TABLE account (username varchar(30) PRIMARY KEY NOT NULL, password varchar(30))",
+    // Create a new account in database
+    "INSERT INTO account (username, password) VALUES ('root', 'root')"
+};
+
+
+void init_db(sqlite3* &db) {
+    // Open the test.db file
+    int rc = sqlite3_open("bbs.db", &db);
+    char *zErrMsg = 0;
+    if (rc) {
+        // failed
+        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        exit(0);
+    }
+    else {
+        // success
+        fprintf(stderr, "Open database successfully\n");
+    }
+    // execute all the init sql statements
+    for (int i = 0; i < 2; i++) {
+        rc = sqlite3_exec(db, init_SQL[i], callback, 0, &zErrMsg);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            printf("%s\n", init_SQL[i]);
+            sqlite3_free(zErrMsg);
+        }
+    }
+}
+
+int callback(void *NotUsed, int argc, char **argv, char **azColName) {
+    int i;
+    for (i = 0; i < argc; i++) {
+        printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+    }
+    printf("\n");
+    return 0;
+}

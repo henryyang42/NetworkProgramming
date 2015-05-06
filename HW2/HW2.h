@@ -21,11 +21,12 @@
 #include <string>
 #include <sstream>
 #include <iostream>
-
+#include <sqlite3.h>
 #define LISTENQ 1024
 #define MAXLINE 2048
 
 using namespace std;
+
 
 typedef struct sockaddr SA;
 
@@ -39,6 +40,9 @@ string send_to_server(int sockfd, struct sockaddr_in &servaddr, string s);
 void print_ip_port(struct sockaddr_in &addr);
 vector<string> strtok(string s);
 
+// Sqlite3
+void init_db(sqlite3* &db);
+int callback(void *NotUsed, int argc, char **argv, char **azColName);
 
 
 #endif
