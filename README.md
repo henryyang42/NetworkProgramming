@@ -2,7 +2,8 @@
 My code of Network Programming @ NTHU
 
  - practice1: simple datetime server
- - practice2: echo server
+ - practice2: tcp echo server
  - practice3: select practice
- - practice4: echo udp server
+ - practice4: udp echo server
+ - practice5: tcp udp mixed echo server
  - HW1: file transfer system

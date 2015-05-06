@@ -37,8 +37,6 @@ again:
         printf("str_echo: read error");
 }
 
-
-
 void dg_echo(int sockfd, SA *pcliaddr, socklen_t clilen){
     int n;
     socklen_t len;

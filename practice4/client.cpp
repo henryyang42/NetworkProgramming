@@ -13,29 +13,18 @@
 #include <unistd.h>
 #define MAXLINE 10000
 typedef struct sockaddr SA;
-
-void str_cli(FILE *fp, int sockfd) {
-    char sendline[MAXLINE], recvline[MAXLINE];
-    while (fgets(sendline, MAXLINE, fp) != NULL) {
-        write(sockfd, sendline, strlen (sendline));
-        if (read(sockfd, recvline, MAXLINE) == 0) {
-            printf("str_cli: server terminated prematurely");
-            exit(0);
-        }
-        fputs(recvline, stdout);
-    }
-}
-
-void dg_cli(FILE *fp, int sockfd, SA *pservaddr, socklen_t servlen){
+void dg_cli(FILE *fp, int sockfd, SA *pservaddr, socklen_t servlen) {
     int n;
     char sendline[MAXLINE], recvline[MAXLINE + 1];
 
     connect(sockfd, (struct sockaddr *) pservaddr, servlen);
-while (fgets(sendline, MAXLINE, fp) != NULL) {
-write(sockfd, sendline, strlen(sendline)); n = read(sockfd, recvline, MAXLINE); recvline[n] = 0; /* null terminate */ fputs(recvline, stdout);
+    while (fgets(sendline, MAXLINE, fp) != NULL) {
+        write(sockfd, sendline, strlen(sendline));
+        n = read(sockfd, recvline, MAXLINE);
+        recvline[n] = 0; /* null terminate */
+        fputs(recvline, stdout);
+    }
 }
-}
-
 
 int main (int argc, char **argv) {
     int sockfd, n;
@@ -56,7 +45,6 @@ int main (int argc, char **argv) {
 
     if (connect(sockfd, (SA *) &servaddr, sizeof(servaddr)) < 0)
         printf("connect error\n");
-    //str_cli(stdin, sockfd);
     dg_cli(stdin, sockfd, (SA *) &servaddr, sizeof(servaddr));
 
     return 0;
