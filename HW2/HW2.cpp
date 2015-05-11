@@ -15,6 +15,10 @@ int udp_cli(struct sockaddr_in &servaddr, char *ip, int port) {
         exit(0);
     }
     servaddr.sin_port = htons(port);
+    if (connect(sockfd, (SA *) &servaddr, sizeof(servaddr)) < 0) {
+        printf("connect error");
+        exit(0);
+    }
 
     return sockfd;
 }
@@ -54,8 +58,10 @@ string send_to_server(int sockfd, struct sockaddr_in &servaddr, string s) {
     int n;
     const char *sendline = s.c_str();
     char recvline[MAXLINE + 1];
-    sendto(sockfd, sendline, strlen(sendline), 0, (SA*)&servaddr, sizeof(servaddr));
-    n = recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
+    //sendto(sockfd, sendline, strlen(sendline), 0, (SA*)&servaddr, sizeof(servaddr));
+    //n = recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
+    write(sockfd, sendline, strlen(sendline));
+    n = read(sockfd, recvline, MAXLINE);
     recvline[n] = 0;
     return string(recvline);
 }
@@ -117,4 +123,29 @@ int callback(void *NotUsed, int argc, char **argv, char **azColName) {
     }
     printf("\n");
     return 0;
+}
+
+/* reads from keypress, doesn't echo */
+int getch(void) {
+    struct termios oldattr, newattr;
+    int ch;
+    tcgetattr( STDIN_FILENO, &oldattr );
+    newattr = oldattr;
+    newattr.c_lflag &= ~( ICANON | ECHO );
+    tcsetattr( STDIN_FILENO, TCSANOW, &newattr );
+    ch = getchar();
+    tcsetattr( STDIN_FILENO, TCSANOW, &oldattr );
+    return ch;
+}
+/* reads from keypress, echoes */
+int getche(void) {
+    struct termios oldattr, newattr;
+    int ch;
+    tcgetattr( STDIN_FILENO, &oldattr );
+    newattr = oldattr;
+    newattr.c_lflag &= ~( ICANON );
+    tcsetattr( STDIN_FILENO, TCSANOW, &newattr );
+    ch = getchar();
+    tcsetattr( STDIN_FILENO, TCSANOW, &oldattr );
+    return ch;
 }

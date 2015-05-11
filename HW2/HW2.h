@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <cstdio>
 #include <dirent.h>
+#include <termios.h>
 #include <vector>
 #include <cstdlib>
 #include <cstring>
@@ -43,6 +44,9 @@ vector<string> strtok(string s);
 // Sqlite3
 void init_db(sqlite3* &db);
 int callback(void *NotUsed, int argc, char **argv, char **azColName);
+
+int getch(void);
+int getche(void);
 
 
 #endif
