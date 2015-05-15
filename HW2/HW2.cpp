@@ -125,9 +125,10 @@ void log(const char *s) {
 // Sqlite3
 vector<map<string, string> > fetch_result;
 
-const char init_SQL[10][100] = {
+const char init_SQL[10][400] = {
     // Create account table in database
     "CREATE TABLE account (username varchar(30) PRIMARY KEY NOT NULL, password varchar(30))",
+    "CREATE TABLE article (id integer PRIMARY KEY NOT NULL, title varchar(30), content varchar(300), time timestamp DEFAULT CURRENT_TIMESTAMP, username varchar(30), ip varchar(30), port integer, hit integer DEFAULT 1)",
     "SELECT * from account",
     "", "", "", ""
 };

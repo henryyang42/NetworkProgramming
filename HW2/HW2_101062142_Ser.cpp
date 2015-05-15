@@ -5,7 +5,7 @@ int n, port;
 int sockfd;
 fd_set rset, allset;
 struct sockaddr_in servaddr, cliaddr;
-string input, output, cmd, query, ip, username, article;
+string input, output, cmd, query, ip, username, article, title, content;
 vector<string> tok;
 pair<vector<map<string, string> >, int> result;
 map<string, struct sockaddr_in> online_addr;
@@ -43,7 +43,7 @@ string service(string input) {
     } else if (tok[0] == "SU") {
         log("Show User");
         string su = "S_SU ";
-        for(iter_online = online_addr.begin(); iter_online != online_addr.end(); iter_online++) {
+        for (iter_online = online_addr.begin(); iter_online != online_addr.end(); iter_online++) {
             su += (iter_online->first) + " ";
         }
         return su;
@@ -69,10 +69,33 @@ string service(string input) {
         article = username + ":" + get_article(2, input);
         for(iter_online = online_addr.begin(); iter_online != online_addr.end(); iter_online++) {
             username = iter_online->first;
-            if(username != tok[1])
+            if (username != tok[1])
                 send_to_user(username, "S_T " + article);
         }
         return "S_T " + article;
+    } else if (tok[0] == "A") {
+        log("Add Article");
+        stringstream ss;
+        ss << input;
+        getline(ss, username);
+        getline(ss, username);
+        getline(ss, title);
+        getline(ss, content);
+        struct sockaddr_in cliaddr = online_addr[username];
+        query = strfmt("INSERT INTO article (username, title, content, ip, port) VALUES ('%s', '%s', '%s', '%s', %d)",
+            username.c_str(), title.c_str(), content.c_str(), get_ip(cliaddr).c_str(), get_port(cliaddr));
+        exec_sql(db, query);
+        return "S_A " + title;
+    } else if (tok[0] == "Y") {
+
+    } else if (tok[0] == "Y") {
+
+    } else if (tok[0] == "Y") {
+
+    } else if (tok[0] == "Y") {
+
+    } else if (tok[0] == "Y") {
+
     } else {
         puts("Wrong command");
     }

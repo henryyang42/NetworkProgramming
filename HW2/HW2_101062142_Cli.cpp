@@ -26,7 +26,7 @@ void service(string input) {
     if(!tok.size()) {
         return;
     }
-    char acc[MAXLINE], pwd[MAXLINE];
+    char acc[MAXLINE], pwd[MAXLINE], title[MAXLINE], content[MAXLINE];
     // Client -> Server
     if(tok[0] == "L") {
         printf("Account: "); get(acc);
@@ -41,7 +41,9 @@ void service(string input) {
     } else if(tok[0] == "SA") {
 
     } else if(tok[0] == "A") {
-
+        printf("Title: "); get(title);
+        printf("Content: "); get(content);
+        cmd = strfmt("A \n%s\n%s\n%s", username.c_str(), title, content);
     } else if(tok[0] == "E") {
 
     } else if(tok[0] == "Y") {
@@ -74,7 +76,7 @@ void service(string input) {
     } else if(tok[0] == "S_T") {
         article = get_article(1, input);
         cout << "|" << article << endl;
-    } else if(tok[0] == "qaq") {
+    } else if(tok[0] == "S_A") {
 
     }else {
         cout << "Wrong command: " << input << endl;
