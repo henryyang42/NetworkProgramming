@@ -48,6 +48,7 @@ int get_port(struct sockaddr_in &addr);
 vector<string> strtok(string s);
 std::string strfmt(const std::string fmt_str, ...);
 void get(char s[]);
+string get_article(int x, string s);
 int max(int a, int b);
 void log(const char *s);
 

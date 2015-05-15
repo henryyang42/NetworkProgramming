@@ -104,6 +104,15 @@ void get(char s[]) {
         s[len] = '\0';
 }
 
+string get_article(int x, string s) {
+    stringstream ss;
+    ss << s;
+    while (x-- > 0)
+        ss >> s;
+    getline(ss, s);
+    return s;
+}
+
 int max(int a, int b) {
     return a > b ? a : b;
 }

@@ -4,7 +4,7 @@ int sockfd, filefd;
 int maxfdp1;
 fd_set rset;
 struct sockaddr_in servaddr;
-string input, state = "greet", cmd, username;
+string input, state = "greet", cmd, username, article;
 vector<string> tok;
 void greet() {
     system("clear");
@@ -17,11 +17,11 @@ void panel() {
 
     printf("*************Hello %s*****************\n", username.c_str());
     puts("[SU]Show User [SA]Show Article [A]dd Article");
-    puts("[E]nter Article [Y]ell [T]ell [LO]gout");
+    puts("[E]nter Article [Y]ell [T]ell [LO]gout [D]elete Account");
 }
 
 void service(string input) {
-    cout << input << endl;
+    log(input.c_str());
     tok = strtok(input);
     cmd = "";
     if(!tok.size()) {
@@ -46,17 +46,23 @@ void service(string input) {
     } else if(tok[0] == "E") {
 
     } else if(tok[0] == "Y") {
-
+        article = get_article(1, input);
+        cmd = strfmt("Y %s %s", username.c_str(), article.c_str());
     } else if(tok[0] == "T") {
-
+        article = get_article(2, input);
+        cmd = strfmt("T %s %s %s", username.c_str(), tok[1].c_str(), article.c_str());
     } else if(tok[0] == "LO") {
         cmd = "LO " + username;
+    } else if(tok[0] == "D") {
+        cmd = "D " + username;
     }
     // Server -> Client
     else if(tok[0] == "S_L") {
         if(tok[1] == "SUCCESS") {
             username = tok[2];
             panel();
+        } else {
+            puts("Login fail");
         }
     } else if(tok[0] == "S_R") {
         cout << "Register " << tok[1] << endl;
@@ -66,8 +72,9 @@ void service(string input) {
         puts("=====Online User=====");
         for(int i = 1; i < tok.size(); i++)
             cout << tok[i] << endl;
-    } else if(tok[0] == "qaq") {
-
+    } else if(tok[0] == "S_T") {
+        article = get_article(1, input);
+        cout << "|" << article << endl;
     } else if(tok[0] == "qaq") {
 
     }else {
@@ -96,7 +103,7 @@ int main(int argc, char **argv) {
         select(maxfdp1, &rset, NULL, NULL, 0);
         if (FD_ISSET(sockfd, &rset)) {
             /* socket is readable */
-            log("socket fd");
+            log("WRITE");
             int n;
             if ((n = read(sockfd, recvline, MAXLINE)) == 0) {
                 printf("str_cli: server terminated prematurely");
@@ -107,7 +114,7 @@ int main(int argc, char **argv) {
         }
         if (FD_ISSET(filefd, &rset)) {
             /* input is readable */
-            log("file fd");
+            log("READ");
             getline(cin, input);
             service(input);
         }
