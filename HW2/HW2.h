@@ -57,8 +57,6 @@ void init_db(sqlite3* &db);
 pair<vector<map<string, string> >, int> exec_sql(sqlite3* &db, string query);
 int callback(void *NotUsed, int argc, char **argv, char **azColName);
 
-int getch(void);
-int getche(void);
 
 
 #endif

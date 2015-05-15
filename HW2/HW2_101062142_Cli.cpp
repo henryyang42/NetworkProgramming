@@ -14,7 +14,6 @@ void greet() {
 
 void panel() {
     system("clear");
-
     printf("*************Hello %s*****************\n", username.c_str());
     puts("[SU]Show User [SA]Show Article [A]dd Article");
     puts("[E]nter Article [Y]ell [T]ell [LO]gout [D]elete Account");
