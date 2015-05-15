@@ -8,10 +8,8 @@ struct sockaddr_in servaddr, cliaddr;
 string input, output, cmd, query, ip, username, article;
 vector<string> tok;
 pair<vector<map<string, string> >, int> result;
-map<string, pair<string, int> > online;
 map<string, struct sockaddr_in> online_addr;
-map<string, pair<string, int> >::iterator iter_online;
-map<pair<string, int>, string> ronline;
+map<string, struct sockaddr_in>::iterator iter_online;
 
 void send_to_user(string username, string s) {
     struct sockaddr_in cliaddr = online_addr[username];
@@ -31,10 +29,6 @@ string service(string input) {
         result = exec_sql(db, query);
         if (result.first.size() == 1) {
             string username = result.first[0]["username"];
-            ip = get_ip(cliaddr);
-            port = get_port(cliaddr);
-            online[username] = make_pair(ip, port);
-            ronline[make_pair(ip, port)] = username;
             online_addr[username] = cliaddr;
             return "S_L SUCCESS " + username;
         }
@@ -49,15 +43,13 @@ string service(string input) {
     } else if (tok[0] == "SU") {
         log("Show User");
         string su = "S_SU ";
-        for(iter_online = online.begin(); iter_online != online.end(); iter_online++) {
+        for(iter_online = online_addr.begin(); iter_online != online_addr.end(); iter_online++) {
             su += (iter_online->first) + " ";
         }
         return su;
     } else if (tok[0] == "LO") {
         log("Logout");
         username = tok[1];
-        ronline.erase(online[username]);
-        online.erase(username);
         online_addr.erase(username);
         return "S_LO SUCCESS";
     } else if (tok[0] == "D") {
@@ -75,7 +67,7 @@ string service(string input) {
         log("Yell User");
         username = tok[1];
         article = username + ":" + get_article(2, input);
-        for(iter_online = online.begin(); iter_online != online.end(); iter_online++) {
+        for(iter_online = online_addr.begin(); iter_online != online_addr.end(); iter_online++) {
             username = iter_online->first;
             if(username != tok[1])
                 send_to_user(username, "S_T " + article);
