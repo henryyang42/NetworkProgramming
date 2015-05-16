@@ -86,7 +86,7 @@ string service(string input) {
         query = strfmt("INSERT INTO article (username, title, content, ip, port) VALUES ('%s', '%s', '%s', '%s', %d)",
             username.c_str(), title.c_str(), content.c_str(), get_ip(cliaddr).c_str(), get_port(cliaddr));
         exec_sql(db, query);
-        return "S_A " + title;
+        return service("SA");
     } else if (tok[0] == "SA") {
         log("Show Article");
         output = "S_SA \n";
@@ -99,10 +99,30 @@ string service(string input) {
                 rows[i]["username"].c_str(), rows[i]["hit"].c_str());
         }
         return output;
-    } else if (tok[0] == "Y") {
+    } else if (tok[0] == "DA") {
+        log("Delete Article");
+        query = strfmt("DELETE FROM article WHERE id='%s'", tok[1].c_str());
+        exec_sql(db, query);
+        return service("SA");
+    } else if (tok[0] == "E") {
+        log("Enter Article");
+        output = "S_EA \n";
+        query = strfmt("SELECT * FROM article WHERE id='%s'", tok[1].c_str());
+        result = exec_sql(db, query);
+        rows = result.first;
+        // Update hit count
+        query = strfmt("UPDATE article SET hit='%d' WHERE id='%s'",
+            atoi(rows[0]["hit"].c_str())+1, tok[1].c_str());
+        exec_sql(db, query);
 
-    } else if (tok[0] == "Y") {
+        output += strfmt("Author: %-16s | Hit: %-7s | ID: %-4s\n",
+                rows[0]["username"].c_str(), rows[0]["hit"].c_str(), rows[0]["id"].c_str());
+        output += strfmt("IP: %-20s | Port: %-6s\n",
+                rows[0]["ip"].c_str(), rows[0]["port"].c_str());
+        output += strfmt("Title: %-17s | Content:\n%-300s\n",
+                rows[0]["title"].c_str(), rows[0]["content"].c_str());
 
+        return output;
     } else if (tok[0] == "Y") {
 
     } else if (tok[0] == "Y") {

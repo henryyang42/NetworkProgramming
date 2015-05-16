@@ -16,17 +16,28 @@ void panel() {
     system("clear");
     printf("*************Hello %s*****************\n", username.c_str());
     puts("[SU]Show User [SA]Show Article [A]dd Article");
-    puts("[E]nter Article [Y]ell [T]ell [LO]gout [D]elete Account");
+    puts("[Y]ell [T]ell [LO]gout [D]elete Account");
 }
 
 void show_article_list(string input) {
     system("clear");
     printf("*************Article List*****************\n");
-    puts("[E]nter Article [B]ack");
+    puts("[E]nter Article [DA]Delete Article [B]ack");
     stringstream ss;
     ss << input;
     getline(ss, input);
-    while(getline(ss, input))
+    while (getline(ss, input))
+        cout << input << endl;
+}
+
+void show_article(string input) {
+    system("clear");
+    printf("*************Article*****************\n");
+    puts("[B]ack");
+    stringstream ss;
+    ss << input;
+    getline(ss, input);
+    while (getline(ss, input))
         cout << input << endl;
 }
 
@@ -34,76 +45,78 @@ void service(string input) {
     log(input.c_str());
     tok = strtok(input);
     cmd = "";
-    if(!tok.size()) {
+    if (!tok.size()) {
         return;
     }
     char acc[MAXLINE], pwd[MAXLINE], title[MAXLINE], content[MAXLINE];
     // Client -> Server
-    if(tok[0] == "L") {
+    if (tok[0] == "L") {
         printf("Account: "); get(acc);
         printf("Password: "); get(pwd);
         cmd = strfmt("L %s %s", acc, pwd);
-    } else if(tok[0] == "R") {
+    } else if (tok[0] == "R") {
         printf("Account: "); get(acc);
         printf("Password: "); get(pwd);
         cmd = strfmt("R %s %s", acc, pwd);
-    } else if(tok[0] == "SU") {
+    } else if (tok[0] == "SU") {
         cmd = "SU";
-    } else if(tok[0] == "SA") {
+    } else if (tok[0] == "SA") {
         cmd = "SA";
-    } else if(tok[0] == "A") {
+    } else if (tok[0] == "A") {
         printf("Title: "); get(title);
         printf("Content: "); get(content);
         cmd = strfmt("A \n%s\n%s\n%s", username.c_str(), title, content);
-    } else if(tok[0] == "E") {
-
-    } else if(tok[0] == "Y") {
+    } else if (tok[0] == "E") {
+        cmd = "E " + tok[1];
+    } else if (tok[0] == "DA") {
+        cmd = "DA " + tok[1];
+    } else if (tok[0] == "Y") {
         article = get_article(1, input);
         cmd = strfmt("Y %s %s", username.c_str(), article.c_str());
-    } else if(tok[0] == "T") {
+    } else if (tok[0] == "T") {
         article = get_article(2, input);
         cmd = strfmt("T %s %s %s", username.c_str(), tok[1].c_str(), article.c_str());
-    } else if(tok[0] == "LO") {
+    } else if (tok[0] == "LO") {
         cmd = "LO " + username;
-    } else if(tok[0] == "D") {
+    } else if (tok[0] == "D") {
         cmd = "D " + username;
-    } else if(tok[0] == "B") {
+    } else if (tok[0] == "B") {
         panel();
     }
     // Server -> Client
-    else if(tok[0] == "S_L") {
-        if(tok[1] == "SUCCESS") {
+    else if (tok[0] == "S_L") {
+        if (tok[1] == "SUCCESS") {
             username = tok[2];
             panel();
         } else {
             puts("Login fail");
         }
-    } else if(tok[0] == "S_R") {
+    } else if (tok[0] == "S_R") {
         cout << "Register " << tok[1] << endl;
-    }  else if(tok[0] == "S_LO") {
+    }  else if (tok[0] == "S_LO") {
         greet();
-    } else if(tok[0] == "S_SU") {
+    } else if (tok[0] == "S_SU") {
         puts("=====Online User=====");
-        for(int i = 1; i < tok.size(); i++)
+        for (int i = 1; i < tok.size(); i++)
             cout << tok[i] << endl;
-    } else if(tok[0] == "S_T") {
+    } else if (tok[0] == "S_T") {
         article = get_article(1, input);
         cout << "|" << article << endl;
-    } else if(tok[0] == "S_A") {
+    } else if (tok[0] == "S_A") {
 
-    }else if(tok[0] == "S_SA") {
+    } else if (tok[0] == "S_SA") {
         show_article_list(input);
-    }else if(tok[0] == "S_A") {
+    } else if (tok[0] == "S_EA") {
+        show_article(input);
+    } else if (tok[0] == "S_A") {
 
-    }else if(tok[0] == "S_A") {
+    } else if (tok[0] == "S_A") {
 
-    }else if(tok[0] == "S_A") {
-
-    }else {
+    } else {
         cout << "Wrong command: " << input << endl;
         return;
     }
-    if(cmd != "")
+    if (cmd != "")
         send_to_server(sockfd, servaddr, cmd);
 }
 
