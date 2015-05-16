@@ -17,6 +17,7 @@ void panel() {
     printf("*************Hello %s*****************\n", username.c_str());
     puts("[SU]Show User [SA]Show Article [A]dd Article");
     puts("[Y]ell [T]ell [LO]gout [D]elete Account");
+    puts("[DI]ctionary");
 }
 
 void show_article_list(string input) {
@@ -39,6 +40,19 @@ void show_article(string input) {
     getline(ss, input);
     while (getline(ss, input))
         cout << input << endl;
+}
+
+void dictionary(string input) {
+    system("clear");
+    printf("*************Dictionary*****************\n");
+    stringstream ss;
+    ss << input;
+    getline(ss, input);
+    getline(ss, input);
+    getline(ss, input);
+    while (getline(ss, input))
+        cout << input << endl;
+    puts("[B]ack");
 }
 
 void service(string input) {
@@ -90,8 +104,8 @@ void service(string input) {
         cmd = "AB " + id + " " + tok[1];
     } else if (tok[0] == "DB") {
         cmd = "DB " + id + " " + tok[1];
-    } else if (tok[0] == "B") {
-        panel();
+    } else if (tok[0] == "DI") {
+        cmd = input;
     } else if (tok[0] == "B") {
         panel();
     } else if (tok[0] == "B") {
@@ -123,8 +137,8 @@ void service(string input) {
         show_article_list(input);
     } else if (tok[0] == "S_EA") {
         show_article(input);
-    } else if (tok[0] == "S_A") {
-
+    } else if (tok[0] == "S_DI") {
+        dictionary(input);
     } else if (tok[0] == "S_A") {
 
     } else {

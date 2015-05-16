@@ -51,6 +51,7 @@ void get(char s[]);
 string get_article(int x, string s);
 int max(int a, int b);
 void log(const char *s);
+string exec(string cmd);
 
 // Sqlite3
 void init_db(sqlite3* &db);

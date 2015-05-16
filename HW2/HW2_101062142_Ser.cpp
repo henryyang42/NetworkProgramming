@@ -145,7 +145,7 @@ string service(string input) {
                          rows[0]["username"].c_str(), rows[0]["hit"].c_str(), rows[0]["id"].c_str());
         output += strfmt("IP: %-20s | Port: %-6s\n",
                          rows[0]["ip"].c_str(), rows[0]["port"].c_str());
-        output += strfmt("Title: %-17s | Content:\n%-300s\n",
+        output += strfmt("Title: %-17s | Content:\n%-100s\n",
                          rows[0]["title"].c_str(), rows[0]["content"].c_str());
         query = strfmt("SELECT * FROM reply WHERE id='%s'", tok[1].c_str());
         result = exec_sql(db, query);
@@ -178,8 +178,8 @@ string service(string input) {
             id.c_str(), tok[2].c_str());
         exec_sql(db, query);
         return service("E " + id);
-    } else if (tok[0] == "Y") {
-
+    } else if (tok[0] == "DI") {
+        return "S_DI \n" + exec("curl dict://dict.org/d:"+tok[1]);
     } else if (tok[0] == "Y") {
 
     } else if (tok[0] == "Y") {
@@ -198,9 +198,9 @@ void dg_echo(int sockfd) {
         n = recvfrom(sockfd, mesg, MAXLINE, 0, (SA*)&cliaddr, &len);
         mesg[n] = 0;
         print_ip_port(cliaddr);
-        //output = "ACK";
-        //sendto(sockfd, output.c_str(), output.length(), 0, (SA*)&cliaddr, len);
-        //usleep(100000);
+        output = "ACK";
+        sendto(sockfd, output.c_str(), output.length(), 0, (SA*)&cliaddr, len);
+        usleep(100000);
         printf("GET: %s\n", mesg);
         output = service(mesg);
         sendto(sockfd, output.c_str(), output.length(), 0, (SA*)&cliaddr, len);

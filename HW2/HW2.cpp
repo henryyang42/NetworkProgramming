@@ -14,10 +14,6 @@ int udp_cli(struct sockaddr_in &servaddr, char *ip, int port) {
         exit(0);
     }
     servaddr.sin_port = htons(port);
-    if (connect(sockfd, (SA *) &servaddr, sizeof(servaddr)) < 0) {
-        printf("connect error");
-        exit(0);
-    }
 
     return sockfd;
 }
@@ -45,12 +41,27 @@ string send_to_server(int sockfd, struct sockaddr_in &servaddr, string s) {
     int n;
     const char *sendline = s.c_str();
     char recvline[MAXLINE + 1];
-    //sendto(sockfd, sendline, strlen(sendline), 0, (SA*)&servaddr, sizeof(servaddr));
-    //n = recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
-    write(sockfd, sendline, strlen(sendline));
+    sendto(sockfd, sendline, strlen(sendline), 0, (SA*)&servaddr, sizeof(servaddr));
+    struct timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 100000;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+        perror("Error");
+    }
+    while(1) {
+        n = recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
+        if(n < 0) {
+            sendto(sockfd, sendline, strlen(sendline), 0, (SA*)&servaddr, sizeof(servaddr));
+            log("RESEND");
+        } else {
+            break;
+        }
+    }
+    //write(sockfd, sendline, strlen(sendline));
     //n = read(sockfd, recvline, MAXLINE);
     //recvline[n] = 0;
     //return string(recvline);
+
     return "done";
 }
 
@@ -121,6 +132,19 @@ void log(const char *s) {
 #ifdef DEBUG
     puts(s);
 #endif
+}
+
+string exec(string cmd) {
+    FILE* pipe = popen(cmd.c_str(), "r");
+    if (!pipe) return "ERROR";
+    char buffer[128];
+    std::string result = "";
+    while (!feof(pipe)) {
+        if (fgets(buffer, 128, pipe) != NULL)
+            result += buffer;
+    }
+    pclose(pipe);
+    return result;
 }
 // Sqlite3
 vector<map<string, string> > fetch_result;
