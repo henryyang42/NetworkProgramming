@@ -86,6 +86,12 @@ void service(string input) {
     } else if (tok[0] == "RE") {
         cout << "Reply: "; getline(cin, reply);
         cmd = strfmt("RE %s %s %s", username.c_str(), id.c_str(), reply.c_str());
+    } else if (tok[0] == "AB") {
+        cmd = "AB " + id + " " + tok[1];
+    } else if (tok[0] == "DB") {
+        cmd = "DB " + id + " " + tok[1];
+    } else if (tok[0] == "B") {
+        panel();
     } else if (tok[0] == "B") {
         panel();
     } else if (tok[0] == "B") {

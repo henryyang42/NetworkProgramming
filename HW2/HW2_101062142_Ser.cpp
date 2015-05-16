@@ -5,10 +5,10 @@ int n, port;
 int sockfd;
 fd_set rset, allset;
 struct sockaddr_in servaddr, cliaddr;
-string input, output, cmd, query, ip, username, article, title, content, id, message;
+string input, output, cmd, query, ip, username, article, title, content, id, message, tmp;
 vector<string> tok;
 pair<vector<map<string, string> >, int> result;
-vector<map<string, string> > rows;
+vector<map<string, string> > rows, blacklist;
 map<string, struct sockaddr_in> online_addr;
 map<string, struct sockaddr_in>::iterator iter_online;
 
@@ -16,6 +16,14 @@ void send_to_user(string username, string s) {
     struct sockaddr_in cliaddr = online_addr[username];
     socklen_t len = sizeof(cliaddr);
     sendto(sockfd, s.c_str(), s.length(), 0, (SA*)&cliaddr, len);
+}
+
+string get_username() {
+    for (iter_online = online_addr.begin(); iter_online != online_addr.end(); iter_online++) {
+        if (get_ip(cliaddr) == get_ip(iter_online->second) && get_port(cliaddr) == get_port(iter_online->second))
+            return iter_online->first;
+    }
+    return "NULL";
 }
 
 string service(string input) {
@@ -68,7 +76,7 @@ string service(string input) {
         log("Yell User");
         username = tok[1];
         article = username + ":" + get_article(2, input);
-        for(iter_online = online_addr.begin(); iter_online != online_addr.end(); iter_online++) {
+        for (iter_online = online_addr.begin(); iter_online != online_addr.end(); iter_online++) {
             username = iter_online->first;
             if (username != tok[1])
                 send_to_user(username, "S_T " + article);
@@ -84,7 +92,7 @@ string service(string input) {
         getline(ss, content);
         struct sockaddr_in cliaddr = online_addr[username];
         query = strfmt("INSERT INTO article (username, title, content, ip, port) VALUES ('%s', '%s', '%s', '%s', %d)",
-            username.c_str(), title.c_str(), content.c_str(), get_ip(cliaddr).c_str(), get_port(cliaddr));
+                       username.c_str(), title.c_str(), content.c_str(), get_ip(cliaddr).c_str(), get_port(cliaddr));
         exec_sql(db, query);
         return service("SA");
     } else if (tok[0] == "SA") {
@@ -93,10 +101,10 @@ string service(string input) {
         query = "SELECT * FROM article WHERE 1";
         result = exec_sql(db, query);
         rows = result.first;
-        for(int i = 0; i < rows.size(); i++) {
+        for (int i = 0; i < rows.size(); i++) {
             output += strfmt("ID: %-3s | Title: %-20s | Author: %-10s | Hit: %-3s\n",
-                rows[i]["id"].c_str(), rows[i]["title"].c_str(),
-                rows[i]["username"].c_str(), rows[i]["hit"].c_str());
+                             rows[i]["id"].c_str(), rows[i]["title"].c_str(),
+                             rows[i]["username"].c_str(), rows[i]["hit"].c_str());
         }
         return output;
     } else if (tok[0] == "DA") {
@@ -112,21 +120,40 @@ string service(string input) {
         rows = result.first;
         // Update hit count
         query = strfmt("UPDATE article SET hit='%d' WHERE id='%s'",
-            atoi(rows[0]["hit"].c_str())+1, tok[1].c_str());
+                       atoi(rows[0]["hit"].c_str()) + 1, tok[1].c_str());
         exec_sql(db, query);
+        query = strfmt("SELECT * from blacklist WHERE id='%s'", rows[0]["id"].c_str());
+        blacklist = exec_sql(db, query).first;
+        // If is owner
+
+        if (rows[0]["username"] == get_username()) {
+            output += "[AB]Add/[DB]Del black list [User ID]\n";
+            output += "Blacklist user: ";
+            for (int i = 0; i < blacklist.size(); i++) {
+                output += blacklist[i]["username"] + " ";
+            }
+            output += "\n";
+        }
+        // Premission deny
+        for (int i = 0; i < blacklist.size(); i++)
+            if (get_username() == blacklist[i]["username"]) {
+                output += "Premission Deny!\n";
+                return output;
+            }
 
         output += strfmt("Author: %-16s | Hit: %-7s | ID: %-4s\n",
-                rows[0]["username"].c_str(), rows[0]["hit"].c_str(), rows[0]["id"].c_str());
+                         rows[0]["username"].c_str(), rows[0]["hit"].c_str(), rows[0]["id"].c_str());
         output += strfmt("IP: %-20s | Port: %-6s\n",
-                rows[0]["ip"].c_str(), rows[0]["port"].c_str());
+                         rows[0]["ip"].c_str(), rows[0]["port"].c_str());
         output += strfmt("Title: %-17s | Content:\n%-300s\n",
-                rows[0]["title"].c_str(), rows[0]["content"].c_str());
+                         rows[0]["title"].c_str(), rows[0]["content"].c_str());
         query = strfmt("SELECT * FROM reply WHERE id='%s'", tok[1].c_str());
         result = exec_sql(db, query);
         rows = result.first;
-        for(int i = 0; i < rows.size(); i++) {
+        output += "************* Reply *************\n";
+        for (int i = 0; i < rows.size(); i++) {
             output += strfmt("IP: %-20s | Port: %-6s | Username: %-15s | Message: %-30s\n",
-                rows[i]["ip"].c_str(), rows[i]["port"].c_str(), rows[i]["username"].c_str(), rows[i]["message"].c_str());
+                             rows[i]["ip"].c_str(), rows[i]["port"].c_str(), rows[i]["username"].c_str(), rows[i]["message"].c_str());
         }
         return output;
     } else if (tok[0] == "RE") {
@@ -136,9 +163,25 @@ string service(string input) {
         id = tok[2];
         struct sockaddr_in cliaddr = online_addr[username];
         query = strfmt("INSERT INTO reply (username, id, message, ip, port) VALUES ('%s', '%s', '%s', '%s', %d)",
-            username.c_str(), id.c_str(), message.c_str(), get_ip(cliaddr).c_str(), get_port(cliaddr));
+                       username.c_str(), id.c_str(), message.c_str(), get_ip(cliaddr).c_str(), get_port(cliaddr));
         exec_sql(db, query);
-        return service("E "+id);
+        return service("E " + id);
+    } else if (tok[0] == "AB") {
+        id = tok[1];
+        query = strfmt("INSERT INTO blacklist (id, username) VALUES (%s, '%s')",
+            id.c_str(), tok[2].c_str());
+        exec_sql(db, query);
+        return service("E " + id);
+    } else if (tok[0] == "DB") {
+        id = tok[1];
+        query = strfmt("DELETE FROM blacklist WHERE id=%s AND username='%s'",
+            id.c_str(), tok[2].c_str());
+        exec_sql(db, query);
+        return service("E " + id);
+    } else if (tok[0] == "Y") {
+
+    } else if (tok[0] == "Y") {
+
     } else if (tok[0] == "Y") {
 
     } else {
