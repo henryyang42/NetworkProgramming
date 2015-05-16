@@ -1,6 +1,6 @@
 #ifndef HW2_H
 #define HW2_H
-#define DEBUG
+//#define DEBUG
 #include <arpa/inet.h>
 #include <cstdio>
 #include <dirent.h>

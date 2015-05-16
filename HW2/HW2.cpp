@@ -46,7 +46,7 @@ string send_to_server(int sockfd, struct sockaddr_in &servaddr, string s) {
     tv.tv_sec = 0;
     tv.tv_usec = 100000;
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
-        perror("Error");
+        log("setsockopt Error");
     }
     while(1) {
         n = recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
@@ -57,11 +57,6 @@ string send_to_server(int sockfd, struct sockaddr_in &servaddr, string s) {
             break;
         }
     }
-    //write(sockfd, sendline, strlen(sendline));
-    //n = read(sockfd, recvline, MAXLINE);
-    //recvline[n] = 0;
-    //return string(recvline);
-
     return "done";
 }
 
