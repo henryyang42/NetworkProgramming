@@ -8,6 +8,7 @@ struct sockaddr_in servaddr, cliaddr;
 string input, output, cmd, query, ip, username, article, title, content;
 vector<string> tok;
 pair<vector<map<string, string> >, int> result;
+vector<map<string, string> > rows;
 map<string, struct sockaddr_in> online_addr;
 map<string, struct sockaddr_in>::iterator iter_online;
 
@@ -86,8 +87,18 @@ string service(string input) {
             username.c_str(), title.c_str(), content.c_str(), get_ip(cliaddr).c_str(), get_port(cliaddr));
         exec_sql(db, query);
         return "S_A " + title;
-    } else if (tok[0] == "Y") {
-
+    } else if (tok[0] == "SA") {
+        log("Show Article");
+        output = "S_SA \n";
+        query = "SELECT * FROM article WHERE 1";
+        result = exec_sql(db, query);
+        rows = result.first;
+        for(int i = 0; i < rows.size(); i++) {
+            output += strfmt("ID: %-3s | Title: %-20s | Author: %-10s | Hit: %-3s\n",
+                rows[i]["id"].c_str(), rows[i]["title"].c_str(),
+                rows[i]["username"].c_str(), rows[i]["hit"].c_str());
+        }
+        return output;
     } else if (tok[0] == "Y") {
 
     } else if (tok[0] == "Y") {
@@ -110,6 +121,9 @@ void dg_echo(int sockfd) {
         n = recvfrom(sockfd, mesg, MAXLINE, 0, (SA*)&cliaddr, &len);
         mesg[n] = 0;
         print_ip_port(cliaddr);
+        //output = "ACK";
+        //sendto(sockfd, output.c_str(), output.length(), 0, (SA*)&cliaddr, len);
+        //usleep(100000);
         printf("GET: %s\n", mesg);
         output = service(mesg);
         sendto(sockfd, output.c_str(), output.length(), 0, (SA*)&cliaddr, len);

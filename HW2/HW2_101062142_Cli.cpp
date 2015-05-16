@@ -19,6 +19,17 @@ void panel() {
     puts("[E]nter Article [Y]ell [T]ell [LO]gout [D]elete Account");
 }
 
+void show_article_list(string input) {
+    system("clear");
+    printf("*************Article List*****************\n");
+    puts("[E]nter Article [B]ack");
+    stringstream ss;
+    ss << input;
+    getline(ss, input);
+    while(getline(ss, input))
+        cout << input << endl;
+}
+
 void service(string input) {
     log(input.c_str());
     tok = strtok(input);
@@ -39,7 +50,7 @@ void service(string input) {
     } else if(tok[0] == "SU") {
         cmd = "SU";
     } else if(tok[0] == "SA") {
-
+        cmd = "SA";
     } else if(tok[0] == "A") {
         printf("Title: "); get(title);
         printf("Content: "); get(content);
@@ -56,6 +67,8 @@ void service(string input) {
         cmd = "LO " + username;
     } else if(tok[0] == "D") {
         cmd = "D " + username;
+    } else if(tok[0] == "B") {
+        panel();
     }
     // Server -> Client
     else if(tok[0] == "S_L") {
@@ -77,6 +90,14 @@ void service(string input) {
         article = get_article(1, input);
         cout << "|" << article << endl;
     } else if(tok[0] == "S_A") {
+
+    }else if(tok[0] == "S_SA") {
+        show_article_list(input);
+    }else if(tok[0] == "S_A") {
+
+    }else if(tok[0] == "S_A") {
+
+    }else if(tok[0] == "S_A") {
 
     }else {
         cout << "Wrong command: " << input << endl;
