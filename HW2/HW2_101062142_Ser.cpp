@@ -5,7 +5,7 @@ int n, port;
 int sockfd;
 fd_set rset, allset;
 struct sockaddr_in servaddr, cliaddr;
-string input, output, cmd, query, ip, username, article, title, content;
+string input, output, cmd, query, ip, username, article, title, content, id, message;
 vector<string> tok;
 pair<vector<map<string, string> >, int> result;
 vector<map<string, string> > rows;
@@ -101,7 +101,7 @@ string service(string input) {
         return output;
     } else if (tok[0] == "DA") {
         log("Delete Article");
-        query = strfmt("DELETE FROM article WHERE id='%s'", tok[1].c_str());
+        query = strfmt("DELETE FROM article WHERE id='%s' AND username='%s'", tok[1].c_str(), tok[2].c_str());
         exec_sql(db, query);
         return service("SA");
     } else if (tok[0] == "E") {
@@ -121,10 +121,24 @@ string service(string input) {
                 rows[0]["ip"].c_str(), rows[0]["port"].c_str());
         output += strfmt("Title: %-17s | Content:\n%-300s\n",
                 rows[0]["title"].c_str(), rows[0]["content"].c_str());
-
+        query = strfmt("SELECT * FROM reply WHERE id='%s'", tok[1].c_str());
+        result = exec_sql(db, query);
+        rows = result.first;
+        for(int i = 0; i < rows.size(); i++) {
+            output += strfmt("IP: %-20s | Port: %-6s | Username: %-15s | Message: %-30s\n",
+                rows[i]["ip"].c_str(), rows[i]["port"].c_str(), rows[i]["username"].c_str(), rows[i]["message"].c_str());
+        }
         return output;
-    } else if (tok[0] == "Y") {
-
+    } else if (tok[0] == "RE") {
+        log("Reply Article");
+        message = get_article(3, input);
+        username = tok[1];
+        id = tok[2];
+        struct sockaddr_in cliaddr = online_addr[username];
+        query = strfmt("INSERT INTO reply (username, id, message, ip, port) VALUES ('%s', '%s', '%s', '%s', %d)",
+            username.c_str(), id.c_str(), message.c_str(), get_ip(cliaddr).c_str(), get_port(cliaddr));
+        exec_sql(db, query);
+        return service("E "+id);
     } else if (tok[0] == "Y") {
 
     } else {

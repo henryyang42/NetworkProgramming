@@ -129,8 +129,9 @@ const char init_SQL[10][400] = {
     // Create account table in database
     "CREATE TABLE account (username varchar(30) PRIMARY KEY NOT NULL, password varchar(30))",
     "CREATE TABLE article (id integer PRIMARY KEY NOT NULL, title varchar(30), content varchar(300), time timestamp DEFAULT CURRENT_TIMESTAMP, username varchar(30), ip varchar(30), port integer, hit integer DEFAULT 1)",
+    "CREATE TABLE reply (id integer NOT NULL, time timestamp DEFAULT CURRENT_TIMESTAMP, username varchar(30), ip varchar(30), port integer, message varchar(50))",
     "SELECT * from account",
-    "", "", "", ""
+    "", "", ""
 };
 
 void init_db(sqlite3* &db) {

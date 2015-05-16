@@ -4,7 +4,7 @@ int sockfd, filefd;
 int maxfdp1;
 fd_set rset;
 struct sockaddr_in servaddr;
-string input, state = "greet", cmd, username, article;
+string input, state = "greet", cmd, username, article, id, reply;
 vector<string> tok;
 void greet() {
     system("clear");
@@ -33,7 +33,7 @@ void show_article_list(string input) {
 void show_article(string input) {
     system("clear");
     printf("*************Article*****************\n");
-    puts("[B]ack");
+    puts("[RE]sponse [B]ack");
     stringstream ss;
     ss << input;
     getline(ss, input);
@@ -68,8 +68,9 @@ void service(string input) {
         cmd = strfmt("A \n%s\n%s\n%s", username.c_str(), title, content);
     } else if (tok[0] == "E") {
         cmd = "E " + tok[1];
+        id = tok[1];
     } else if (tok[0] == "DA") {
-        cmd = "DA " + tok[1];
+        cmd = "DA " + tok[1] + " " + username;
     } else if (tok[0] == "Y") {
         article = get_article(1, input);
         cmd = strfmt("Y %s %s", username.c_str(), article.c_str());
@@ -82,7 +83,15 @@ void service(string input) {
         cmd = "D " + username;
     } else if (tok[0] == "B") {
         panel();
+    } else if (tok[0] == "RE") {
+        cout << "Reply: "; getline(cin, reply);
+        cmd = strfmt("RE %s %s %s", username.c_str(), id.c_str(), reply.c_str());
+    } else if (tok[0] == "B") {
+        panel();
+    } else if (tok[0] == "B") {
+        panel();
     }
+
     // Server -> Client
     else if (tok[0] == "S_L") {
         if (tok[1] == "SUCCESS") {
