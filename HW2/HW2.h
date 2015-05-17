@@ -30,7 +30,7 @@
 #include <utility>
 #define LISTENQ 1024
 #define MAXLINE 2048
-#define FILETIMEOUT 2000
+#define FILETIMEOUT 200000
 using namespace std;
 
 
