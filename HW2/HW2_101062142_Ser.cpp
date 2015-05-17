@@ -111,8 +111,16 @@ string service(string input) {
         return output;
     } else if (tok[0] == "DA") {
         log("Delete Article");
-        query = strfmt("DELETE FROM article WHERE id='%s' AND username='%s'", tok[1].c_str(), tok[2].c_str());
-        exec_sql(db, query);
+        query = strfmt("SELECT * FROM article WHERE id='%s' AND username='%s'", tok[1].c_str(), tok[2].c_str());
+        result = exec_sql(db, query);
+        if (result.first.size()) {
+            query = strfmt("DELETE FROM article WHERE id='%s' AND username='%s'", tok[1].c_str(), tok[2].c_str());
+            exec_sql(db, query);
+            query = strfmt("DELETE FROM filelist WHERE id='%s'", tok[1].c_str());
+            exec_sql(db, query);
+            query = strfmt("DELETE FROM blacklist WHERE id='%s'", tok[1].c_str());
+            exec_sql(db, query);
+        }
         return service("SA");
     } else if (tok[0] == "E") {
         log("Enter Article");

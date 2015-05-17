@@ -31,7 +31,7 @@
 #define MAXLINE 2048
 #define FILETIMEOUT 200000
 #define WAIT 200000
-#define TICK 10
+#define TICK 200
 #define DEBUG
 
 using namespace std;

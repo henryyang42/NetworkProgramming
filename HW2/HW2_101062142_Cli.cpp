@@ -148,7 +148,8 @@ void service(string input) {
             int totalbytes = atoi(recvline);
             printf("Reciving %d bytes...", totalbytes);
             while (totalbytes > 0) {
-                int numbytes = recvfrom(sockfd, buf, MAXLINE, 0, (SA*)&servaddr, NULL);
+                socklen_t len = sizeof(servaddr);
+                int numbytes = recvfrom(sockfd, buf, MAXLINE, 0, (SA*)&servaddr, &len);
                 ;
                 if (numbytes < 0) {
                     puts("File is broken");
