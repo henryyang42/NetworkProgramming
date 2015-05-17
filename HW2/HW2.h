@@ -29,8 +29,8 @@
 #include <memory>    // For std::unique_ptr
 #include <utility>
 #define LISTENQ 1024
-#define MAXLINE 2048
-
+#define MAXLINE (1<<13)
+#define FILETIMEOUT 2000
 using namespace std;
 
 

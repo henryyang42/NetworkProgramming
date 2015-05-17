@@ -1,11 +1,38 @@
 #include "HW2.h"
 char recvline[MAXLINE + 1];
+struct stat filestat;
+FILE *fp;
+char buf[MAXLINE];
 int sockfd, filefd;
 int maxfdp1;
 fd_set rset;
 struct sockaddr_in servaddr;
-string input, state = "greet", cmd, username, article, id, reply;
+string input, state = "greet", cmd, username, article, id, reply, filename;
 vector<string> tok;
+
+int send_file_to_server(char s[], int numbytes) {
+    int n;
+    const char *sendline = s;
+    char recvline[MAXLINE + 1];
+    sendto(sockfd, sendline, numbytes, 0, (SA*)&servaddr, sizeof(servaddr));
+    struct timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 3*FILETIMEOUT;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+        log("setsockopt Error");
+    }
+    while(1) {
+        n = recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
+        if(n < 0) {
+            sendto(sockfd, sendline, strlen(sendline), 0, (SA*)&servaddr, sizeof(servaddr));
+            log("RESEND");
+        } else {
+            break;
+        }
+    }
+    return n;
+}
+
 void greet() {
     system("clear");
     puts("*************Welcome*****************");
@@ -29,17 +56,19 @@ void show_article_list(string input) {
     getline(ss, input);
     while (getline(ss, input))
         cout << input << endl;
+    puts("");
 }
 
 void show_article(string input) {
     system("clear");
     printf("*************Article*****************\n");
-    puts("[RE]sponse [B]ack");
+    puts("[UP]load [DO]wnload [RE]sponse [B]ack");
     stringstream ss;
     ss << input;
     getline(ss, input);
     while (getline(ss, input))
         cout << input << endl;
+    puts("");
 }
 
 void dictionary(string input) {
@@ -52,7 +81,7 @@ void dictionary(string input) {
     getline(ss, input);
     while (getline(ss, input))
         cout << input << endl;
-    puts("[B]ack");
+    puts("\n[B]ack");
 }
 
 void service(string input) {
@@ -106,10 +135,29 @@ void service(string input) {
         cmd = "DB " + id + " " + tok[1];
     } else if (tok[0] == "DI") {
         cmd = input;
-    } else if (tok[0] == "B") {
-        panel();
-    } else if (tok[0] == "B") {
-        panel();
+    } else if (tok[0] == "UP") {
+        filename = tok[1];
+        if (lstat(filename.c_str(), &filestat) < 0 || (fp = fopen(filename.c_str(), "rb")) == 0) {
+            puts("File error.");
+            return;
+        }
+        int sz = filestat.st_size;
+        cmd = strfmt("UP %s %s %s %d", id.c_str(), username.c_str(), filename.c_str(), sz);
+        send_to_server(sockfd, servaddr, cmd);
+        sleep(1);
+        int numbytes, totalbytes = 0;
+        while (!feof(fp)) {
+            numbytes = fread(buf, sizeof(char), sizeof(buf), fp);
+            numbytes = send_file_to_server(buf, numbytes);
+            totalbytes += numbytes;
+        }
+        printf("Total %d bytes sent.\n", totalbytes);
+        fclose(fp);
+
+
+        cmd = "";
+    } else if (tok[0] == "DO") {
+        cmd = "DO " + id + " " + tok[1];
     }
 
     // Server -> Client
@@ -154,7 +202,7 @@ int main(int argc, char **argv) {
         puts("Usage: ./HW2_101062142_Cli [IP] [port]");
         return 0;
     }
-
+    exec("mkdir Download");
     sockfd = udp_cli(servaddr, argv[1], atoi(argv[2]));
     filefd = fileno(stdin);
 

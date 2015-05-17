@@ -1,9 +1,11 @@
 #include "HW2.h"
 sqlite3 *db; // sqlite3 db struct
-char recvline[MAXLINE + 1];
+char recvline[MAXLINE + 1], buf[MAXLINE];
 int n, port;
 int sockfd;
 fd_set rset, allset;
+struct stat filestat;
+FILE *fp;
 struct sockaddr_in servaddr, cliaddr;
 string input, output, cmd, query, ip, username, article, title, content, id, message, tmp;
 vector<string> tok;
@@ -11,6 +13,18 @@ pair<vector<map<string, string> >, int> result;
 vector<map<string, string> > rows, blacklist;
 map<string, struct sockaddr_in> online_addr;
 map<string, struct sockaddr_in>::iterator iter_online;
+
+
+int get_file_from_client(int sockfd) {
+    int n;
+    memset(buf, 0, MAXLINE);
+    socklen_t len = sizeof(cliaddr);
+    n = recvfrom(sockfd, buf, MAXLINE, 0, (SA*)&cliaddr, &len);
+    output = "ACK";
+    sendto(sockfd, output.c_str(), output.length(), 0, (SA*)&cliaddr, len);
+    usleep(FILETIMEOUT);
+    return n;
+}
 
 void send_to_user(string username, string s) {
     struct sockaddr_in cliaddr = online_addr[username];
@@ -147,10 +161,19 @@ string service(string input) {
                          rows[0]["ip"].c_str(), rows[0]["port"].c_str());
         output += strfmt("Title: %-17s | Content:\n%-100s\n",
                          rows[0]["title"].c_str(), rows[0]["content"].c_str());
+
+        output += "************* File List *************\n";
+        query = strfmt("SELECT * FROM filelist WHERE id='%s'", tok[1].c_str());
+        result = exec_sql(db, query);
+        rows = result.first;
+        for (int i = 0; i < rows.size(); i++) {
+            output += strfmt("Uploader: %-14s | Filename: %-s (%-s bytes)\n",
+                             rows[i]["username"].c_str(), rows[i]["filename"].c_str(), rows[i]["size"].c_str());
+        }
+        output += "************* Reply *************\n";
         query = strfmt("SELECT * FROM reply WHERE id='%s'", tok[1].c_str());
         result = exec_sql(db, query);
         rows = result.first;
-        output += "************* Reply *************\n";
         for (int i = 0; i < rows.size(); i++) {
             output += strfmt("IP: %-20s | Port: %-6s | Username: %-15s | Message: %-30s\n",
                              rows[i]["ip"].c_str(), rows[i]["port"].c_str(), rows[i]["username"].c_str(), rows[i]["message"].c_str());
@@ -169,20 +192,39 @@ string service(string input) {
     } else if (tok[0] == "AB") {
         id = tok[1];
         query = strfmt("INSERT INTO blacklist (id, username) VALUES (%s, '%s')",
-            id.c_str(), tok[2].c_str());
+                       id.c_str(), tok[2].c_str());
         exec_sql(db, query);
         return service("E " + id);
     } else if (tok[0] == "DB") {
         id = tok[1];
         query = strfmt("DELETE FROM blacklist WHERE id=%s AND username='%s'",
-            id.c_str(), tok[2].c_str());
+                       id.c_str(), tok[2].c_str());
         exec_sql(db, query);
         return service("E " + id);
     } else if (tok[0] == "DI") {
-        return "S_DI \n" + exec("curl dict://dict.org/d:"+tok[1]);
-    } else if (tok[0] == "Y") {
+        return "S_DI \n" + exec("curl dict://dict.org/d:" + tok[1]);
+    } else if (tok[0] == "UP") {
+        query = strfmt("INSERT INTO filelist (id, username, filename, size) VALUES (%s, '%s', '%s', %s)",
+                       tok[1].c_str(), tok[2].c_str(), tok[3].c_str(), tok[4].c_str());
+        exec_sql(db, query);
 
-    } else if (tok[0] == "Y") {
+
+        if ((fp = fopen(("Upload/" + tok[3]).c_str(), "wb")) != NULL) {
+            puts("Server reciving file...");
+            //Receive file
+            int totalbytes = atoi(tok[4].c_str());
+            printf("Reciving %d bytes...", totalbytes);
+            while (totalbytes > 0) {
+                int numbytes = get_file_from_client(sockfd);
+                totalbytes -= numbytes;
+                numbytes = fwrite(buf, sizeof(char), numbytes, fp);
+            }
+            puts("done.");
+            fclose(fp);
+        }
+
+        return service("E " + tok[1]);
+    } else if (tok[0] == "DO") {
 
     } else {
         puts("Wrong command");
@@ -200,7 +242,7 @@ void dg_echo(int sockfd) {
         print_ip_port(cliaddr);
         output = "ACK";
         sendto(sockfd, output.c_str(), output.length(), 0, (SA*)&cliaddr, len);
-        usleep(100000);
+        usleep(50000);
         printf("GET: %s\n", mesg);
         output = service(mesg);
         sendto(sockfd, output.c_str(), output.length(), 0, (SA*)&cliaddr, len);
@@ -215,6 +257,7 @@ int main(int argc, char **argv) {
     }
     sockfd = udp_ser(servaddr, atoi(argv[1]));
     init_db(db);
+    exec("mkdir Upload");
 
     dg_echo(sockfd);
     sqlite3_close(db);
