@@ -1,5 +1,5 @@
 #include "HW2.h"
-char recvline[MAXLINE + 1];
+char recvline[MAXLINE];
 struct stat filestat;
 FILE *fp;
 char buf[MAXLINE];

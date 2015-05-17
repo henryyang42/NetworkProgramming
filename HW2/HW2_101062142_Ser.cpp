@@ -1,6 +1,6 @@
 #include "HW2.h"
 sqlite3 *db; // sqlite3 db struct
-char recvline[MAXLINE + 1], buf[MAXLINE];
+char recvline[MAXLINE], buf[MAXLINE];
 int n, port;
 int sockfd;
 fd_set rset, allset;
@@ -22,7 +22,6 @@ int get_file_from_client(int sockfd) {
     n = recvfrom(sockfd, buf, MAXLINE, 0, (SA*)&cliaddr, &len);
     output = "ACK";
     sendto(sockfd, output.c_str(), output.length(), 0, (SA*)&cliaddr, len);
-    usleep(FILETIMEOUT);
     return n;
 }
 
