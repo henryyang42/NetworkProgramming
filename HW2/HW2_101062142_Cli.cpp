@@ -10,21 +10,20 @@ struct sockaddr_in servaddr;
 string input, state = "greet", cmd, username, article, id, reply, filename;
 vector<string> tok;
 
-int send_file_to_server(char s[], int numbytes) {
+int send_file_to_server(int numbytes) {
     int n;
-    const char *sendline = s;
-    char recvline[MAXLINE + 1];
-    sendto(sockfd, sendline, numbytes, 0, (SA*)&servaddr, sizeof(servaddr));
+    char recvline[MAXLINE];
     struct timeval tv;
     tv.tv_sec = 0;
     tv.tv_usec = 3*FILETIMEOUT;
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
         log("setsockopt Error");
     }
+    sendto(sockfd, buf, numbytes, 0, (SA*)&servaddr, sizeof(servaddr));
     while(1) {
         n = recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
         if(n < 0) {
-            sendto(sockfd, sendline, strlen(sendline), 0, (SA*)&servaddr, sizeof(servaddr));
+            sendto(sockfd, buf, numbytes, 0, (SA*)&servaddr, sizeof(servaddr));
             log("RESEND");
         } else {
             break;
@@ -148,7 +147,7 @@ void service(string input) {
         int numbytes, totalbytes = 0;
         while (!feof(fp)) {
             numbytes = fread(buf, sizeof(char), sizeof(buf), fp);
-            numbytes = send_file_to_server(buf, numbytes);
+            numbytes = send_file_to_server(numbytes);
             totalbytes += numbytes;
         }
         printf("Total %d bytes sent.\n", totalbytes);
