@@ -1,6 +1,5 @@
 #ifndef HW2_H
 #define HW2_H
-//#define DEBUG
 #include <arpa/inet.h>
 #include <cstdio>
 #include <dirent.h>
@@ -30,7 +29,10 @@
 #include <utility>
 #define LISTENQ 1024
 #define MAXLINE 2048
-#define FILETIMEOUT 200000
+#define FILETIMEOUT 100000
+#define WAIT 100000
+#define DEBUG
+
 using namespace std;
 
 

@@ -44,7 +44,7 @@ string send_to_server(int sockfd, struct sockaddr_in &servaddr, string s) {
     sendto(sockfd, sendline, strlen(sendline), 0, (SA*)&servaddr, sizeof(servaddr));
     struct timeval tv;
     tv.tv_sec = 0;
-    tv.tv_usec = 100000;
+    tv.tv_usec = WAIT;
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
         log("setsockopt Error");
     }

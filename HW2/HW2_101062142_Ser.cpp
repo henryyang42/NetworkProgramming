@@ -7,13 +7,34 @@ fd_set rset, allset;
 struct stat filestat;
 FILE *fp;
 struct sockaddr_in servaddr, cliaddr;
-string input, output, cmd, query, ip, username, article, title, content, id, message, tmp;
+string input, output, cmd, query, ip, username, article, title, content, id, message, tmp, filename;
 vector<string> tok;
 pair<vector<map<string, string> >, int> result;
 vector<map<string, string> > rows, blacklist;
 map<string, struct sockaddr_in> online_addr;
 map<string, struct sockaddr_in>::iterator iter_online;
 
+int send_file_to_client(int numbytes) {
+    int n;
+    char recvline[MAXLINE];
+    struct timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = FILETIMEOUT;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+        log("setsockopt Error");
+    }
+    n = sendto(sockfd, buf, numbytes, 0, (SA*)&cliaddr, sizeof(cliaddr));
+    /*while (1) {
+        n = recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
+        if (n < 0) {
+            sendto(sockfd, buf, numbytes, 0, (SA*)&cliaddr, sizeof(cliaddr));
+            log("RESEND");
+        } else {
+            break;
+        }
+    }*/
+    return n;
+}
 
 int get_file_from_client(int sockfd) {
     int n;
@@ -207,7 +228,7 @@ string service(string input) {
                        tok[1].c_str(), tok[2].c_str(), tok[3].c_str(), tok[4].c_str());
         exec_sql(db, query);
 
-
+        usleep(WAIT);
         if ((fp = fopen(("Upload/" + tok[3]).c_str(), "wb")) != NULL) {
             puts("Server reciving file...");
             //Receive file
@@ -224,7 +245,26 @@ string service(string input) {
 
         return service("E " + tok[1]);
     } else if (tok[0] == "DO") {
-
+        filename = ("Upload/" + tok[1]);
+        if (lstat(filename.c_str(), &filestat) < 0 || (fp = fopen(filename.c_str(), "rb")) == 0) {
+            puts("File error.");
+            sendto(sockfd, "0", 1, 0, (SA*)&cliaddr,  sizeof(cliaddr));
+        } else {
+            int sz = filestat.st_size, totalbytes = 0;
+            printf("Sending %d bytes...", sz);
+            sendto(sockfd, to_string(sz).c_str(), to_string(sz).length(), 0, (SA*)&cliaddr,  sizeof(cliaddr));
+            usleep(WAIT);
+            while (!feof(fp)) {
+                sz = fread(buf, sizeof(char), sizeof(buf), fp);
+                sz = send_file_to_client(sz);
+                totalbytes += sz;
+                printf("%d\n", totalbytes);
+                usleep(100);
+            }
+            printf(" %d done\n", totalbytes);
+            fclose(fp);
+        }
+        return "OK";
     } else {
         puts("Wrong command");
     }
@@ -241,7 +281,7 @@ void dg_echo(int sockfd) {
         print_ip_port(cliaddr);
         output = "ACK";
         sendto(sockfd, output.c_str(), output.length(), 0, (SA*)&cliaddr, len);
-        usleep(50000);
+        usleep(WAIT);
         printf("GET: %s\n", mesg);
         output = service(mesg);
         sendto(sockfd, output.c_str(), output.length(), 0, (SA*)&cliaddr, len);
