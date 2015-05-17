@@ -52,7 +52,7 @@ string send_to_server(int sockfd, struct sockaddr_in &servaddr, string s) {
         n = recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
         if(n < 0) {
             sendto(sockfd, sendline, strlen(sendline), 0, (SA*)&servaddr, sizeof(servaddr));
-            log("RESEND");
+            log(("RESEND: "+string(sendline)).c_str());
         } else {
             break;
         }

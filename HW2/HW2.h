@@ -29,8 +29,9 @@
 #include <utility>
 #define LISTENQ 1024
 #define MAXLINE 2048
-#define FILETIMEOUT 100000
-#define WAIT 100000
+#define FILETIMEOUT 200000
+#define WAIT 200000
+#define TICK 10
 #define DEBUG
 
 using namespace std;

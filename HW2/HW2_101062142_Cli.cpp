@@ -10,38 +10,6 @@ struct sockaddr_in servaddr;
 string input, state = "greet", cmd, username, article, id, reply, filename;
 vector<string> tok;
 
-int send_file_to_server(int numbytes) {
-    int n;
-    char recvline[MAXLINE];
-    struct timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = FILETIMEOUT;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
-        log("setsockopt Error");
-    }
-    sendto(sockfd, buf, numbytes, 0, (SA*)&servaddr, sizeof(servaddr));
-    while (1) {
-        n = recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
-        if (n < 0) {
-            sendto(sockfd, buf, numbytes, 0, (SA*)&servaddr, sizeof(servaddr));
-            log("RESEND");
-        } else {
-            break;
-        }
-    }
-    return n;
-}
-
-int get_file_from_server(int sockfd) {
-    int n;
-    memset(buf, 0, MAXLINE);
-    socklen_t len = sizeof(servaddr);
-    n = recvfrom(sockfd, buf, MAXLINE, 0, (SA*)&servaddr, &len);
-    //string output = "ACK";
-    //sendto(sockfd, output.c_str(), output.length(), 0, (SA*)&servaddr, len);
-    return n;
-}
-
 void greet() {
     system("clear");
     puts("*************Welcome*****************");
@@ -157,8 +125,10 @@ void service(string input) {
         int numbytes, totalbytes = 0;
         while (!feof(fp)) {
             numbytes = fread(buf, sizeof(char), sizeof(buf), fp);
-            numbytes = send_file_to_server(numbytes);
+            numbytes = sendto(sockfd, buf, numbytes, 0, (SA*)&servaddr, sizeof(servaddr));
             totalbytes += numbytes;
+            usleep(TICK);
+
         }
         printf("Total %d bytes sent.\n", totalbytes);
         fclose(fp);
@@ -169,17 +139,23 @@ void service(string input) {
         cmd = "DO " + tok[1];
         filename = tok[1];
         send_to_server(sockfd, servaddr, cmd);
-        sleep(1);
+        usleep(WAIT);
         memset(recvline, 0, sizeof(recvline));
         recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
-        sleep(1);
+        usleep(WAIT);
         if ((fp = fopen(("Download/" + filename).c_str(), "wb")) != NULL) {
             //Receive file
             int totalbytes = atoi(recvline);
             printf("Reciving %d bytes...", totalbytes);
             while (totalbytes > 0) {
-                int numbytes = get_file_from_server(sockfd);
-                printf("%d\n", totalbytes);
+                int numbytes = recvfrom(sockfd, buf, MAXLINE, 0, (SA*)&servaddr, NULL);
+                ;
+                if (numbytes < 0) {
+                    puts("File is broken");
+                    fclose(fp);
+                    exec("rm Download/"+filename);
+                    return;
+                }
                 totalbytes -= numbytes;
                 numbytes = fwrite(buf, sizeof(char), numbytes, fp);
             }
@@ -217,8 +193,9 @@ void service(string input) {
         show_article(input);
     } else if (tok[0] == "S_DI") {
         dictionary(input);
-    } else if (tok[0] == "OK_") {
+    } else if (tok[0] == "OK") {
         log("OK");
+        return;
     } else {
         cout << "Wrong command: " << input << endl;
         return;

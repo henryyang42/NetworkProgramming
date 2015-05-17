@@ -14,38 +14,6 @@ vector<map<string, string> > rows, blacklist;
 map<string, struct sockaddr_in> online_addr;
 map<string, struct sockaddr_in>::iterator iter_online;
 
-int send_file_to_client(int numbytes) {
-    int n;
-    char recvline[MAXLINE];
-    struct timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = FILETIMEOUT;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
-        log("setsockopt Error");
-    }
-    n = sendto(sockfd, buf, numbytes, 0, (SA*)&cliaddr, sizeof(cliaddr));
-    /*while (1) {
-        n = recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
-        if (n < 0) {
-            sendto(sockfd, buf, numbytes, 0, (SA*)&cliaddr, sizeof(cliaddr));
-            log("RESEND");
-        } else {
-            break;
-        }
-    }*/
-    return n;
-}
-
-int get_file_from_client(int sockfd) {
-    int n;
-    memset(buf, 0, MAXLINE);
-    socklen_t len = sizeof(cliaddr);
-    n = recvfrom(sockfd, buf, MAXLINE, 0, (SA*)&cliaddr, &len);
-    output = "ACK";
-    sendto(sockfd, output.c_str(), output.length(), 0, (SA*)&cliaddr, len);
-    return n;
-}
-
 void send_to_user(string username, string s) {
     struct sockaddr_in cliaddr = online_addr[username];
     socklen_t len = sizeof(cliaddr);
@@ -224,25 +192,32 @@ string service(string input) {
     } else if (tok[0] == "DI") {
         return "S_DI \n" + exec("curl dict://dict.org/d:" + tok[1]);
     } else if (tok[0] == "UP") {
-        query = strfmt("INSERT INTO filelist (id, username, filename, size) VALUES (%s, '%s', '%s', %s)",
-                       tok[1].c_str(), tok[2].c_str(), tok[3].c_str(), tok[4].c_str());
-        exec_sql(db, query);
-
         usleep(WAIT);
+        int tot, totalbytes;
         if ((fp = fopen(("Upload/" + tok[3]).c_str(), "wb")) != NULL) {
             puts("Server reciving file...");
             //Receive file
-            int totalbytes = atoi(tok[4].c_str());
+            tot = 0;
+            totalbytes = atoi(tok[4].c_str());
             printf("Reciving %d bytes...", totalbytes);
-            while (totalbytes > 0) {
-                int numbytes = get_file_from_client(sockfd);
-                totalbytes -= numbytes;
+            socklen_t len = sizeof(cliaddr);
+            while (tot < totalbytes) {
+                int numbytes = recvfrom(sockfd, buf, MAXLINE, 0, (SA*)&cliaddr, &len);
+                if (numbytes < 0)
+                    break;
+                tot += numbytes;
                 numbytes = fwrite(buf, sizeof(char), numbytes, fp);
             }
             puts("done.");
             fclose(fp);
         }
-
+        if (tot == totalbytes) {
+            query = strfmt("INSERT INTO filelist (id, username, filename, size) VALUES (%s, '%s', '%s', %s)",
+                           tok[1].c_str(), tok[2].c_str(), tok[3].c_str(), tok[4].c_str());
+            exec_sql(db, query);
+        } else {
+            exec("rm Upload/" + tok[3]);
+        }
         return service("E " + tok[1]);
     } else if (tok[0] == "DO") {
         filename = ("Upload/" + tok[1]);
@@ -256,10 +231,9 @@ string service(string input) {
             usleep(WAIT);
             while (!feof(fp)) {
                 sz = fread(buf, sizeof(char), sizeof(buf), fp);
-                sz = send_file_to_client(sz);
+                sz = sendto(sockfd, buf, sz, 0, (SA*)&cliaddr, sizeof(cliaddr));
                 totalbytes += sz;
-                printf("%d\n", totalbytes);
-                usleep(100);
+                usleep(TICK);
             }
             printf(" %d done\n", totalbytes);
             fclose(fp);
@@ -275,8 +249,17 @@ void dg_echo(int sockfd) {
     int n;
     socklen_t len = sizeof(cliaddr);
     char mesg[MAXLINE + 1];
+    struct timeval tv;
+    tv.tv_sec = 2;
+    tv.tv_usec = 0;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+        log("setsockopt Error");
+    }
     while (1) {
         n = recvfrom(sockfd, mesg, MAXLINE, 0, (SA*)&cliaddr, &len);
+        if (n == -1) {
+            continue;
+        }
         mesg[n] = 0;
         print_ip_port(cliaddr);
         output = "ACK";
