@@ -198,7 +198,7 @@ void service(string input) {
         log("OK");
         return;
     } else {
-        cout << "Wrong command: " << input << endl;
+        log(("Wrong command: " + input).c_str());
         return;
     }
     if (cmd != "")

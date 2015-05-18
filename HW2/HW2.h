@@ -31,7 +31,6 @@
 #define MAXLINE 3000
 #define WAIT 20000
 #define TICK 200
-#define DEBUG
 
 using namespace std;
 

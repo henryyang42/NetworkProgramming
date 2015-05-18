@@ -1,4 +1,4 @@
-CC = g++ # -std=c++11
+CC = g++ # -std=c++11 # -DDEBUG
 
 all:
 	${CC} HW2_101062142_Ser.cpp HW2.cpp -o HW2_101062142_Ser -lsqlite3
