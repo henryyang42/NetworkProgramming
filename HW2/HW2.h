@@ -28,9 +28,8 @@
 #include <memory>    // For std::unique_ptr
 #include <utility>
 #define LISTENQ 1024
-#define MAXLINE 2048
-#define FILETIMEOUT 200000
-#define WAIT 200000
+#define MAXLINE 3000
+#define WAIT 20000
 #define TICK 200
 #define DEBUG
 
