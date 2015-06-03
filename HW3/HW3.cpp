@@ -1,6 +1,52 @@
 #include "HW3.h"
+int connect2fd(struct sockaddr_in &addr, const char *ip, int port) {
+    int sockfd;
+    bzero(&addr, sizeof(addr));
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        puts("socket error");
+        exit(0);
+    }
+    // IPV4
+    addr.sin_family = AF_INET;
+    // IP
+    if (inet_pton(AF_INET, ip, &addr.sin_addr) <= 0)
+        printf("inet_ption error for %s\n", ip);
+    // Port
+    addr.sin_port = htons(port);
 
-int udp_cli(struct sockaddr_in &servaddr, char *ip, int port) {
+    if (connect(sockfd, (SA *) &addr, sizeof(addr)) < 0) {
+        printf("connect error");
+        exit(0);
+    }
+
+    return sockfd;
+}
+
+int listen2fd(struct sockaddr_in &addr, int port) {
+    int sockfd;
+    bzero(&addr, sizeof(addr));
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        puts("socket error");
+        exit(0);
+    }
+    // IPV4
+    addr.sin_family = AF_INET;
+    // IP
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    // Port
+    addr.sin_port = htons(port);
+
+    if (bind(sockfd, (SA *)&addr, sizeof(addr)) < 0) {
+        puts("bind error");
+        exit(0);
+    }
+    listen(sockfd, LISTENQ);
+
+    return sockfd;
+}
+
+
+int udp_cli(struct sockaddr_in &servaddr, const char *ip, int port) {
     int sockfd;
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         puts("socket error");

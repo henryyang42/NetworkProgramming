@@ -4,12 +4,84 @@ struct stat filestat;
 FILE *fp;
 char buf[MAXLINE];
 int sockfd, filefd;
-int maxfdp1;
+int maxfdp1, serv_port;
 fd_set rset;
 struct sockaddr_in servaddr;
-string input, state = "greet", cmd, username, article, id, reply, filename;
+string input, state = "greet", cmd, username, article, id, reply, filename, serv_ip;
 vector<string> tok;
+map<string, pair<string, int> >ip_port;
+struct SF{
+    int part;
+    string filename;
+    string ip;
+    int port;
+}sf_get, sf_send;
 
+void *send_file(void *ptr) {
+    log("SEND FILE");
+    struct sockaddr_in addr, client_addr;
+    struct stat filestat;
+    char sendline[MAXLINE] = {};
+    SF sf = *((SF *) ptr);
+    FILE *fp = fopen(("Upload/" + sf.filename).c_str(), "rb");
+    lstat(("Upload/" + sf.filename).c_str(), &filestat);
+    int file_sz = filestat.st_size, yes = 1;
+    sf.port += sf.part + 1;
+    int listenfd = listen2fd(addr, sf.port);
+    int addr_len = sizeof(client_addr);
+    int connfd = accept(listenfd, (SA *)&client_addr, (socklen_t *)&addr_len);
+    setsockopt(connfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+    sprintf(sendline, "%d", file_sz);
+    log(sendline);
+    write(connfd, sendline, strlen(sendline));
+    read(connfd, sendline, MAXLINE);
+
+
+    log("END SEND FILE");
+    fclose(fp);
+    close(connfd);
+    close(listenfd);
+    fflush(stdout);
+}
+
+void *get_file(void *ptr) {
+    log("GET FILE");
+    char recvline[MAXLINE] = {};
+    struct sockaddr_in addr;
+    SF sf = *((SF *) ptr);
+    FILE *fp = fopen(("Download/" + sf.filename).c_str(), "wb");
+    sf.port += sf.part + 1;
+    int connfd = connect2fd(addr, sf.ip.c_str(), sf.port), yes = 1;
+    setsockopt(connfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+    read(connfd, recvline, MAXLINE);
+    write(connfd, recvline, strlen(recvline));
+
+
+    log("END GET FILE");
+    fclose(fp);
+    close(connfd);
+    fflush(stdout);
+}
+
+void ip_port_send(string ip, int port, string msg) {
+    struct sockaddr_in addr;
+    int fd = udp_cli(addr, ip.c_str(), port);
+    int n;
+    const char *sendline = msg.c_str();
+    char recvline[MAXLINE + 1];
+    sendto(fd, sendline, strlen(sendline), 0, (SA*)&addr, sizeof(addr));
+}
+
+string gl() {
+    char recvline[MAXLINE] = {};
+    recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
+    return string(recvline);
+}
+void sd(string s) {
+    sendto(sockfd, s.c_str(), strlen(s.c_str()), 0, (SA*)&servaddr, sizeof(servaddr));
+    gl();
+}
 void greet() {
     system("clear");
     puts("*************Welcome*****************");
@@ -61,6 +133,26 @@ void dictionary(string input) {
     puts("\n[B]ack");
 }
 
+void *get_file_list(void *ptr) {
+    while (1) {
+        DIR *dir;
+        struct dirent *ent;
+        if ((dir = opendir ("Upload/")) != NULL) {
+            /* print all the files and directories within directory */
+            while ((ent = readdir (dir)) != NULL) {
+                string filename(ent->d_name);
+                log(ent->d_name);
+                ip_port_send(serv_ip, serv_port, "FR " + username + " " + filename);
+            }
+            closedir (dir);
+        } else {
+            /* could not open directory */
+            perror ("");
+        }
+        sleep(10);
+    }
+}
+
 void service(string input) {
     log(input.c_str());
     tok = strtok(input);
@@ -70,7 +162,16 @@ void service(string input) {
     }
     char acc[MAXLINE], pwd[MAXLINE], title[MAXLINE], content[MAXLINE];
     // Client -> Server
-    if (tok[0] == "L") {
+    if (tok[0] == "SF") {
+        cmd = "SF";
+    } else if (tok[0] == "T") {
+        article = get_article(2, input);
+        cmd = strfmt("S_T %s %s", username.c_str(), article.c_str());
+        if (ip_port.find(tok[1]) != ip_port.end()) {
+            ip_port_send(ip_port[tok[1]].first,ip_port[tok[1]].second, cmd);
+        }
+        cmd = "";
+    } else if (tok[0] == "L") {
         printf("Account: "); get(acc);
         printf("Password: "); get(pwd);
         cmd = strfmt("L %s %s", acc, pwd);
@@ -94,10 +195,7 @@ void service(string input) {
     } else if (tok[0] == "Y") {
         article = get_article(1, input);
         cmd = strfmt("Y %s %s", username.c_str(), article.c_str());
-    } else if (tok[0] == "T") {
-        article = get_article(2, input);
-        cmd = strfmt("T %s %s %s", username.c_str(), tok[1].c_str(), article.c_str());
-    } else if (tok[0] == "LO") {
+    }  else if (tok[0] == "LO") {
         cmd = "LO " + username;
     } else if (tok[0] == "D") {
         cmd = "D " + username;
@@ -112,99 +210,62 @@ void service(string input) {
         cmd = "DB " + id + " " + tok[1];
     } else if (tok[0] == "DI") {
         cmd = input;
-    } else if (tok[0] == "UP") {
-        filename = tok[1];
-        if (lstat(filename.c_str(), &filestat) < 0 || (fp = fopen(filename.c_str(), "rb")) == 0) {
-            puts("File error.");
-            return;
-        }
-        int sz = filestat.st_size;
-        cmd = strfmt("UP %s %s %s %d", id.c_str(), username.c_str(), filename.c_str(), sz);
-        send_to_server(sockfd, servaddr, cmd);
-        sleep(1);
-        int numbytes, totalbytes = 0;
-        while (!feof(fp)) {
-            numbytes = fread(buf, sizeof(char), sizeof(buf), fp);
-            numbytes = sendto(sockfd, buf, numbytes, 0, (SA*)&servaddr, sizeof(servaddr));
-            totalbytes += numbytes;
-            usleep(TICK);
-
-        }
-        printf("Total %d bytes sent.\n", totalbytes);
-        fclose(fp);
-
-
-        cmd = "";
-    } else if (tok[0] == "DO") {
-        cmd = "DO " + tok[1];
-        filename = tok[1];
-        send_to_server(sockfd, servaddr, cmd);
-        usleep(WAIT);
-        memset(recvline, 0, sizeof(recvline));
-        recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
-        usleep(WAIT);
-        if ((fp = fopen(("Download/" + filename).c_str(), "wb")) != NULL) {
-            //Receive file
-            int totalbytes = atoi(recvline);
-            printf("Reciving %d bytes...", totalbytes);
-            while (totalbytes > 0) {
-                socklen_t len = sizeof(servaddr);
-                int numbytes = recvfrom(sockfd, buf, MAXLINE, 0, (SA*)&servaddr, &len);
-                ;
-                if (numbytes < 0) {
-                    puts("File is broken");
-                    fclose(fp);
-                    exec("rm Download/"+filename);
-                    return;
-                }
-                totalbytes -= numbytes;
-                numbytes = fwrite(buf, sizeof(char), numbytes, fp);
-            }
-            puts("done.");
-            fclose(fp);
-        }
-        return;
-        cmd = "";
     }
-
     // Server -> Client
+    else if (tok[0] == "S_SF") {
+        cout << input << endl;
+    }
     else if (tok[0] == "S_L") {
         if (tok[1] == "SUCCESS") {
             username = tok[2];
+            pthread_t file_lookup_thread;
+            pthread_create(&file_lookup_thread, NULL, get_file_list, NULL);
             panel();
         } else {
             puts("Login fail");
+        }
+    } else if (tok[0] == "S_SU") {
+        ip_port.clear();
+        puts("=====Online User=====");
+        for (int i = 1; i < tok.size(); i += 3) {
+            cout << strfmt("%s %s %s", tok[i].c_str(), tok[i + 1].c_str(), tok[i + 2].c_str()) << endl;
+            ip_port[tok[i]] = make_pair(tok[i + 1], atoi(tok[i + 2].c_str()));
         }
     } else if (tok[0] == "S_R") {
         cout << "Register " << tok[1] << endl;
     }  else if (tok[0] == "S_LO") {
         greet();
-    } else if (tok[0] == "S_SU") {
-        puts("=====Online User=====");
-        for (int i = 1; i < tok.size(); i++)
-            cout << tok[i] << endl;
     } else if (tok[0] == "S_T") {
         article = get_article(1, input);
         cout << "|" << article << endl;
-    } else if (tok[0] == "S_A") {
-
     } else if (tok[0] == "S_SA") {
         show_article_list(input);
     } else if (tok[0] == "S_EA") {
         show_article(input);
     } else if (tok[0] == "S_DI") {
         dictionary(input);
-    } else if (tok[0] == "OK") {
+    } else if (tok[0] == "OK" || tok[0] == "ACK") {
         log("OK");
         return;
     } else {
         log(("Wrong command: " + input).c_str());
         return;
     }
-    if (cmd != "")
+    if (cmd != ""){
         send_to_server(sockfd, servaddr, cmd);
+        cmd = "";
+    }
 }
-
+void test() {
+    log("TEST");
+    pthread_t t1, t2;
+    sf_send.filename = sf_get.filename = "Makefile";
+    sf_send.ip = sf_get.ip = "127.0.0.1";
+    sf_send.port = sf_get.port = serv_port+1;
+    pthread_create(&t2, NULL, send_file, (void*)&sf_send);
+    sleep(1);
+    pthread_create(&t1, NULL, get_file, (void*)&sf_get);
+}
 int main(int argc, char **argv) {
     if (argc != 3) {
         puts("Usage: ./HW2_101062142_Cli [IP] [port]");
@@ -212,10 +273,13 @@ int main(int argc, char **argv) {
     }
     exec("mkdir Download");
     sockfd = udp_cli(servaddr, argv[1], atoi(argv[2]));
+    serv_ip = string(argv[1]);
+    serv_port = atoi(argv[2]);
     filefd = fileno(stdin);
 
     FD_ZERO(&rset);
     greet();
+    test();
     while (1) {
         FD_SET(filefd, &rset);
         FD_SET(sockfd, &rset);

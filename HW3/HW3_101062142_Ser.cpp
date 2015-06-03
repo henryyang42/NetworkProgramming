@@ -13,7 +13,9 @@ pair<vector<map<string, string> >, int> result;
 vector<map<string, string> > rows, blacklist;
 map<string, struct sockaddr_in> online_addr;
 map<string, struct sockaddr_in>::iterator iter_online;
-
+map<string, set<string> >file_archive;
+map<string, set<string> >::iterator fa_it;
+pthread_mutex_t fa_mutex;
 void send_to_user(string username, string s) {
     struct sockaddr_in cliaddr = online_addr[username];
     socklen_t len = sizeof(cliaddr);
@@ -28,13 +30,55 @@ string get_username() {
     return "NULL";
 }
 
+void broadcast_to_user(string msg) {
+    for (iter_online = online_addr.begin(); iter_online != online_addr.end(); iter_online++) {
+        username = iter_online->first;
+        if (username != tok[1])
+            send_to_user(username, msg);
+    }
+}
+
+string gfl() {
+    string fl = "";
+    for (fa_it = file_archive.begin(); fa_it != file_archive.end(); fa_it++) {
+        fl += fa_it->first;
+        for (set<string>::iterator it = (fa_it->second).begin(); it != (fa_it->second).end(); it++) {
+            fl += " " + (*it);
+        }
+
+        fl += "\n";
+    }
+    return fl;
+}
+
+
 string service(string input) {
     tok = strtok(input);
     if (!tok.size()) {
         return "WTF";
     }
     char acc[MAXLINE], pwd[MAXLINE];
-    if (tok[0] == "L") {
+    if (tok[0] == "FR") {
+        // File regieser
+        string username = tok[1];
+        string filename = tok[2];
+        pthread_mutex_lock(&fa_mutex);
+        file_archive[filename].insert(username);
+        pthread_mutex_unlock(&fa_mutex);
+        return "NORETURN";
+    }
+    else if (tok[0] == "SF") {
+        log("Show File");
+        return "S_SF \n" + gfl();
+    } else if (tok[0] == "SU") {
+        log("Show User");
+        string su = "S_SU ";
+        for (iter_online = online_addr.begin(); iter_online != online_addr.end(); iter_online++) {
+            su += strfmt("%s %s %d ", (iter_online->first).c_str(),
+                get_ip(iter_online->second).c_str(), get_port(iter_online->second));
+        }
+        return su;
+    } else if (tok[0] == "L") {
         log("Login");
         query = strfmt("SELECT * FROM account WHERE username='%s' and password='%s'", tok[1].c_str(), tok[2].c_str());
         result = exec_sql(db, query);
@@ -51,13 +95,6 @@ string service(string input) {
         if (result.second == SQLITE_OK)
             return "S_R SUCCESS";
         return "S_R FAIL";
-    } else if (tok[0] == "SU") {
-        log("Show User");
-        string su = "S_SU ";
-        for (iter_online = online_addr.begin(); iter_online != online_addr.end(); iter_online++) {
-            su += (iter_online->first) + " ";
-        }
-        return su;
     } else if (tok[0] == "LO") {
         log("Logout");
         username = tok[1];
@@ -275,7 +312,8 @@ void dg_echo(int sockfd) {
         usleep(WAIT);
         printf("GET: %s\n", mesg);
         output = service(mesg);
-        sendto(sockfd, output.c_str(), output.length(), 0, (SA*)&cliaddr, len);
+        if (output != "NORETURN")
+            sendto(sockfd, output.c_str(), output.length(), 0, (SA*)&cliaddr, len);
     }
 }
 
@@ -288,7 +326,6 @@ int main(int argc, char **argv) {
     sockfd = udp_ser(servaddr, atoi(argv[1]));
     init_db(db);
     exec("mkdir Upload");
-
     dg_echo(sockfd);
     sqlite3_close(db);
     return 0;

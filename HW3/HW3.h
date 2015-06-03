@@ -23,6 +23,8 @@
 #include <sstream>
 #include <iostream>
 #include <map>
+#include <set>
+#include <pthread.h>
 #include <sqlite3.h>
 #include <stdarg.h>  // For va_start, etc.
 #include <memory>    // For std::unique_ptr
@@ -30,14 +32,15 @@
 #define LISTENQ 1024
 #define MAXLINE 3000
 #define WAIT 20000
-#define TICK 200
+#define TICK 2000
 
 using namespace std;
 
 
 typedef struct sockaddr SA;
-
-int udp_cli(struct sockaddr_in &addr, char *ip, int port);
+int connect2fd(struct sockaddr_in &addr, const char *ip, int port);
+int listen2fd(struct sockaddr_in &addr, int port);
+int udp_cli(struct sockaddr_in &addr, const char *ip, int port);
 int udp_ser(struct sockaddr_in &addr, int port);
 
 string send_to_server(int sockfd, struct sockaddr_in &servaddr, string s);
