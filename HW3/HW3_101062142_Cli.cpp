@@ -405,6 +405,7 @@ int main(int argc, char **argv) {
         return 0;
     }
     exec("mkdir Download");
+    exec("mkdir Upload");
     sockfd = udp_cli(servaddr, argv[1], atoi(argv[2]));
     serv_ip = string(argv[1]);
     serv_port = atoi(argv[2]);
