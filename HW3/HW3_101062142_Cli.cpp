@@ -61,6 +61,7 @@ void *send_file(void *ptr) {
     close(connfd);
     close(listenfd);
     free(file);
+    printf("Upload %s finished.\n", sf.filename.c_str());
     fflush(stdout);
     return NULL;
 }
@@ -88,6 +89,7 @@ void *get_file(void *ptr) {
     log("END GET FILE");
     fclose(fp);
     close(connfd);
+    printf("Download %s finished.\n", sf.filename.c_str());
     fflush(stdout);
     return NULL;
 }
