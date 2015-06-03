@@ -31,9 +31,11 @@ void *send_file(void *ptr) {
     lstat(("Upload/" + sf.filename).c_str(), &filestat);
     long long file_sz = filestat.st_size, offset = 0;
     sf.port += sf.part + 1;
-    int listenfd = listen2fd(addr, sf.port);
+    int listenfd = listen2fd(addr, sf.port), yes = 1;
     int addr_len = sizeof(client_addr);
     int connfd = accept(listenfd, (SA *)&client_addr, (socklen_t *)&addr_len);
+    setsockopt(connfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+
     char *file = (char*)malloc(sizeof(char) * file_sz);
     fread(file, sizeof(char), file_sz, fp);
     fclose(fp);
@@ -46,6 +48,7 @@ void *send_file(void *ptr) {
     write(connfd, sendline, strlen(sendline));
     read(connfd, sendline, MAXLINE);
 
+    printf("Upload %s started.\n", sf.filename.c_str());
     while (file_sz > 0) {
         int numbytes = min((long long)MAXLINE, file_sz);
         memcpy(sendline, file + offset, numbytes);
@@ -67,7 +70,7 @@ void *send_file(void *ptr) {
 
 void *get_file(void *ptr) {
     log("GET FILE");
-    usleep(100000);
+    usleep(300000);
     char recvline[MAXLINE] = {};
     struct sockaddr_in addr;
     SF sf = *((SF *) ptr);
@@ -78,6 +81,8 @@ void *get_file(void *ptr) {
     read(connfd, recvline, MAXLINE);
     write(connfd, recvline, strlen(recvline));
     int file_sz = atoi(recvline);
+    printf("Download %s started.\n", sf.filename.c_str());
+
     while (file_sz > 0) {
         int numbytes = read(connfd, recvline, sizeof(recvline));
         fwrite(recvline, sizeof(char), numbytes, fp);
@@ -100,6 +105,7 @@ void ip_port_send(string ip, int port, string msg) {
     const char *sendline = msg.c_str();
     char recvline[MAXLINE + 1];
     sendto(fd, sendline, strlen(sendline), 0, (SA*)&addr, sizeof(addr));
+    close(fd);
 }
 
 string gl() {
@@ -121,7 +127,7 @@ void panel() {
     system("clear");
     printf("*************Hello %s*****************\n", username.c_str());
     puts("[SU]Show User [SA]Show Article [A]dd Article");
-    puts("[Y]ell [T]ell [LO]gout [D]elete Account");
+    puts("[Y]ell [T]ell [LO]gout [DE]lete Account");
     puts("[DI]ctionary [U]pload [D]ownload [PD]Parallel Download");
 }
 
@@ -192,13 +198,15 @@ void service(string input) {
     char acc[MAXLINE], pwd[MAXLINE], title[MAXLINE], content[MAXLINE];
     // Client -> Server
     if (tok[0] == "PD") {
-        pthread_t t1[10];
+        pthread_t t1[100];
         string fn = tok[1];
-        SF sf_get[10];
-        int SS = 10;
+        SF sf_get[100];
+        int SS = 1;
+        if(tok.size() >= 3)
+            SS = atoi(tok[2].c_str());
         vector<string>ns;
-        for(int i = 0; i < file_archive[fn].size(); i++){
-            if(file_archive[fn][i] != username)
+        for (int i = 0; i < file_archive[fn].size(); i++) {
+            if (file_archive[fn][i] != username)
                 ns.push_back(file_archive[fn][i]);
         }
         if (ns.size() == 0) {
@@ -206,16 +214,17 @@ void service(string input) {
             return;
         }
         for (int i = 0; i < SS; i++) {
-            string name= ns[i%ns.size()];
+            string name = ns[i % ns.size()];
             cmd = strfmt("S_D %s %s %d %d", username.c_str(), fn.c_str(), i, SS);
             ip_port_send(ip_port[name].first, ip_port[name].second, cmd);
-            printf("Download %s %d/%d from %s\n", fn.c_str(), i+1, SS, name.c_str());
+            printf("Download %s %d/%d from %s\n", fn.c_str(), i + 1, SS, name.c_str());
             sf_get[i].filename = strfmt("%s.%d", fn.c_str(), i);
             sf_get[i].tot_part = SS;
             sf_get[i].part = i;
             sf_get[i].ip = ip_port[name].first;
-            sf_get[i].port = 1234;
+            sf_get[i].port = 37778;
             pthread_create(&t1[i], NULL, get_file, (void*)&sf_get[i]);
+            usleep(10000);
         }
         cmd = "";
         FILE *fp = fopen(("Download/" + fn).c_str(), "wb");
@@ -243,7 +252,7 @@ void service(string input) {
         if (ip_port.find(tok[1]) != ip_port.end()) {
             ip_port_send(ip_port[tok[1]].first, ip_port[tok[1]].second, cmd);
             sf_get.ip = ip_port[tok[1]].first;
-            sf_get.port = 1234;
+            sf_get.port = 37778;
             sf_get.filename = tok[2];
             pthread_t t1;
             pthread_create(&t1, NULL, get_file, (void*)&sf_get);
@@ -253,9 +262,9 @@ void service(string input) {
         if (ip_port.find(tok[1]) != ip_port.end()) {
             SF sf_send;
             sf_send.ip = ip_port[tok[1]].first;
-            sf_send.port = 1234;
+            sf_send.port = 37778;
             sf_send.part = sf_send.tot_part = 0;
-            if(tok.size() >= 5){
+            if (tok.size() >= 5) {
                 sf_send.part = atoi(tok[3].c_str());
                 sf_send.tot_part = atoi(tok[4].c_str());
             }
@@ -300,7 +309,7 @@ void service(string input) {
         cmd = strfmt("Y %s %s", username.c_str(), article.c_str());
     }  else if (tok[0] == "LO") {
         cmd = "LO " + username;
-    } else if (tok[0] == "D") {
+    } else if (tok[0] == "DE") {
         cmd = "D " + username;
     } else if (tok[0] == "B") {
         panel();
@@ -319,10 +328,19 @@ void service(string input) {
         stringstream ss(input);
         getline(ss, input);
         file_archive.clear();
-        while(getline(ss, input)){
+        while (getline(ss, input)) {
             cout << input << endl;
             tok = strtok(input);
-            for(int i = 1; i < tok.size(); i++)
+            for (int i = 1; i < tok.size(); i++)
+                file_archive[tok[0]].push_back(tok[i]);
+        }
+    } else if (tok[0] == "S_SF_HIDE") {
+        stringstream ss(input);
+        getline(ss, input);
+        file_archive.clear();
+        while (getline(ss, input)) {
+            tok = strtok(input);
+            for (int i = 1; i < tok.size(); i++)
                 file_archive[tok[0]].push_back(tok[i]);
         }
     }
@@ -340,6 +358,11 @@ void service(string input) {
         puts("=====Online User=====");
         for (int i = 1; i < tok.size(); i += 3) {
             cout << strfmt("%s %s %s", tok[i].c_str(), tok[i + 1].c_str(), tok[i + 2].c_str()) << endl;
+            ip_port[tok[i]] = make_pair(tok[i + 1], atoi(tok[i + 2].c_str()));
+        }
+    } else if (tok[0] == "S_SU_HIDE") {
+        ip_port.clear();
+        for (int i = 1; i < tok.size(); i += 3) {
             ip_port[tok[i]] = make_pair(tok[i + 1], atoi(tok[i + 2].c_str()));
         }
     } else if (tok[0] == "S_R") {
@@ -376,7 +399,7 @@ void test() {
         sf_get.filename = strfmt("%s.%d", fn.c_str(), i);
         sf_send.filename = fn;
         sf_send.ip = sf_get.ip = "127.0.0.1";
-        sf_send.port = sf_get.port = 1234;
+        sf_send.port = sf_get.port = 37778;
         sf_send.tot_part = SS;
         sf_get.part = sf_send.part = i;
         pthread_create(&t2[i], NULL, send_file, (void*)&sf_send);

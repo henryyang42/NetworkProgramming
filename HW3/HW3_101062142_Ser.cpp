@@ -65,14 +65,22 @@ string service(string input) {
         pthread_mutex_lock(&fa_mutex);
         file_archive[filename].insert(username);
         pthread_mutex_unlock(&fa_mutex);
+        broadcast_to_user(service("SU HIDE"));
+        broadcast_to_user(service("SF HIDE"));
         return "NORETURN";
     }
     else if (tok[0] == "SF") {
         log("Show File");
+        if(tok.size() >= 2) {
+            return "S_SF_HIDE \n" + gfl();
+        }
         return "S_SF \n" + gfl();
     } else if (tok[0] == "SU") {
         log("Show User");
-        string su = "S_SU ";
+        string su;
+        su = "S_SU ";
+        if(tok.size() >= 2)
+            su = "S_SU_HIDE ";
         for (iter_online = online_addr.begin(); iter_online != online_addr.end(); iter_online++) {
             su += strfmt("%s %s %d ", (iter_online->first).c_str(),
                 get_ip(iter_online->second).c_str(), get_port(iter_online->second));
