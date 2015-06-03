@@ -1,11 +1,12 @@
 #include "HW3.h"
 int connect2fd(struct sockaddr_in &addr, const char *ip, int port) {
-    int sockfd;
+    int sockfd, yes = 1;
     bzero(&addr, sizeof(addr));
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         puts("socket error");
         exit(0);
     }
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
     // IPV4
     addr.sin_family = AF_INET;
     // IP
@@ -23,12 +24,13 @@ int connect2fd(struct sockaddr_in &addr, const char *ip, int port) {
 }
 
 int listen2fd(struct sockaddr_in &addr, int port) {
-    int sockfd;
+    int sockfd, yes = 1;
     bzero(&addr, sizeof(addr));
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         puts("socket error");
         exit(0);
     }
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
     // IPV4
     addr.sin_family = AF_INET;
     // IP

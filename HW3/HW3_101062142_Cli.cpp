@@ -30,13 +30,17 @@ void *send_file(void *ptr) {
     int listenfd = listen2fd(addr, sf.port);
     int addr_len = sizeof(client_addr);
     int connfd = accept(listenfd, (SA *)&client_addr, (socklen_t *)&addr_len);
-    setsockopt(connfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
-    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
     sprintf(sendline, "%d", file_sz);
     log(sendline);
     write(connfd, sendline, strlen(sendline));
     read(connfd, sendline, MAXLINE);
 
+    while (!feof(fp)) {
+        int numbytes = fread(sendline, sizeof(char), sizeof(sendline), fp);
+        numbytes = write(connfd, sendline, numbytes);
+        memset(sendline, 0, sizeof(sendline));
+        usleep(1);
+    }
 
     log("END SEND FILE");
     fclose(fp);
@@ -47,16 +51,22 @@ void *send_file(void *ptr) {
 
 void *get_file(void *ptr) {
     log("GET FILE");
+    usleep(500000);
     char recvline[MAXLINE] = {};
     struct sockaddr_in addr;
     SF sf = *((SF *) ptr);
     FILE *fp = fopen(("Download/" + sf.filename).c_str(), "wb");
     sf.port += sf.part + 1;
     int connfd = connect2fd(addr, sf.ip.c_str(), sf.port), yes = 1;
-    setsockopt(connfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
     read(connfd, recvline, MAXLINE);
     write(connfd, recvline, strlen(recvline));
-
+    int file_sz = atoi(recvline);
+    while (file_sz > 0){
+        int numbytes = read(connfd, recvline, sizeof(recvline));
+        fwrite(recvline, sizeof(char), numbytes, fp);
+        memset(recvline, 0, sizeof(recvline));
+        file_sz -= numbytes;
+    }
 
     log("END GET FILE");
     fclose(fp);
@@ -162,7 +172,32 @@ void service(string input) {
     }
     char acc[MAXLINE], pwd[MAXLINE], title[MAXLINE], content[MAXLINE];
     // Client -> Server
-    if (tok[0] == "SF") {
+    if (tok[0] == "U") {
+        cmd = "D " + username + " " + tok[2];
+        if (ip_port.find(tok[1]) != ip_port.end()) {
+            ip_port_send(ip_port[tok[1]].first,ip_port[tok[1]].second, cmd);
+        }
+        cmd = "";
+    } else if (tok[0] == "D") {
+        cmd = "S_D " + username + " " +tok[2];
+        if (ip_port.find(tok[1]) != ip_port.end()) {
+            ip_port_send(ip_port[tok[1]].first,ip_port[tok[1]].second, cmd);
+            sf_get.ip = ip_port[tok[1]].first;
+            sf_get.port = 1234;
+            sf_get.filename = tok[2];
+            pthread_t t1;
+            pthread_create(&t1, NULL, get_file, (void*)&sf_get);
+        }
+        cmd = "";
+    } else if(tok[0] == "S_D"){
+        if (ip_port.find(tok[1]) != ip_port.end()) {
+            sf_send.ip = ip_port[tok[1]].first;
+            sf_send.port = 1234;
+            sf_send.filename = tok[2];
+            pthread_t t1;
+            pthread_create(&t1, NULL, send_file, (void*)&sf_send);
+        }
+    }else if (tok[0] == "SF") {
         cmd = "SF";
     } else if (tok[0] == "T") {
         article = get_article(2, input);
@@ -259,13 +294,15 @@ void service(string input) {
 void test() {
     log("TEST");
     pthread_t t1, t2;
-    sf_send.filename = sf_get.filename = "Makefile";
+    string fn;cin >> fn;
+    sf_send.filename = sf_get.filename = fn;
     sf_send.ip = sf_get.ip = "127.0.0.1";
     sf_send.port = sf_get.port = serv_port+1;
     pthread_create(&t2, NULL, send_file, (void*)&sf_send);
     sleep(1);
     pthread_create(&t1, NULL, get_file, (void*)&sf_get);
 }
+
 int main(int argc, char **argv) {
     if (argc != 3) {
         puts("Usage: ./HW2_101062142_Cli [IP] [port]");
@@ -279,7 +316,7 @@ int main(int argc, char **argv) {
 
     FD_ZERO(&rset);
     greet();
-    test();
+
     while (1) {
         FD_SET(filefd, &rset);
         FD_SET(sockfd, &rset);
