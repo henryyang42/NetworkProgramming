@@ -51,7 +51,6 @@ void *send_file(void *ptr) {
         memcpy(sendline, file + offset, numbytes);
         offset += numbytes;
         file_sz -= numbytes;
-        printf("%lld\n", file_sz);
         numbytes = write(connfd, sendline, numbytes);
         memset(sendline, 0, sizeof(sendline));
         usleep(1);
@@ -68,7 +67,7 @@ void *send_file(void *ptr) {
 
 void *get_file(void *ptr) {
     log("GET FILE");
-    usleep(50000);
+    usleep(100000);
     char recvline[MAXLINE] = {};
     struct sockaddr_in addr;
     SF sf = *((SF *) ptr);
@@ -209,7 +208,6 @@ void service(string input) {
         for (int i = 0; i < SS; i++) {
             string name= ns[i%ns.size()];
             cmd = strfmt("S_D %s %s %d %d", username.c_str(), fn.c_str(), i, SS);
-            cout << cmd << endl;
             ip_port_send(ip_port[name].first, ip_port[name].second, cmd);
             printf("Download %s %d/%d from %s\n", fn.c_str(), i+1, SS, name.c_str());
             sf_get[i].filename = strfmt("%s.%d", fn.c_str(), i);
