@@ -36,13 +36,12 @@ void *send_file(void *ptr) {
     int connfd = accept(listenfd, (SA *)&client_addr, (socklen_t *)&addr_len);
     setsockopt(connfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
-    char *file = (char*)malloc(sizeof(char) * file_sz);
-    fread(file, sizeof(char), file_sz, fp);
-    fclose(fp);
     if (sf.tot_part) {
         offset = (file_sz * sf.part) / sf.tot_part;
         file_sz = (file_sz * (sf.part + 1)) / sf.tot_part - offset;
     }
+    fseek (fp , offset , SEEK_SET );
+
     sprintf(sendline, "%lld", file_sz);
     log(sendline);
     write(connfd, sendline, strlen(sendline));
@@ -51,7 +50,7 @@ void *send_file(void *ptr) {
     printf("Upload %s started.\n", sf.filename.c_str());
     while (file_sz > 0) {
         int numbytes = min((long long)MAXLINE, file_sz);
-        memcpy(sendline, file + offset, numbytes);
+        fread(sendline, sizeof(char), numbytes, fp);
         offset += numbytes;
         file_sz -= numbytes;
         numbytes = write(connfd, sendline, numbytes);
@@ -62,7 +61,6 @@ void *send_file(void *ptr) {
     log("END SEND FILE");
     close(connfd);
     close(listenfd);
-    free(file);
     printf("Upload %s finished.\n", sf.filename.c_str());
     fflush(stdout);
     return NULL;
