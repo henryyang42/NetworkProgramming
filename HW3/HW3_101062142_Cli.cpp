@@ -215,7 +215,7 @@ void service(string input) {
             string name = ns[i % ns.size()];
             cmd = strfmt("S_D %s %s %d %d", username.c_str(), fn.c_str(), i, SS);
             ip_port_send(ip_port[name].first, ip_port[name].second, cmd);
-            usleep(10000);
+            usleep(50000);
             printf("Download %s %d/%d from %s\n", fn.c_str(), i + 1, SS, name.c_str());
             sf_get[i].filename = strfmt("%s.%d", fn.c_str(), i);
             sf_get[i].tot_part = SS;
