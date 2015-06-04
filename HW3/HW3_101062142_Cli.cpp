@@ -40,7 +40,7 @@ void *send_file(void *ptr) {
         offset = (file_sz * sf.part) / sf.tot_part;
         file_sz = (file_sz * (sf.part + 1)) / sf.tot_part - offset;
     }
-    fseek (fp , offset , SEEK_SET );
+    fseek (fp , offset , SEEK_SET);
 
     sprintf(sendline, "%lld", file_sz);
     log(sendline);
