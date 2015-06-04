@@ -215,6 +215,7 @@ void service(string input) {
             string name = ns[i % ns.size()];
             cmd = strfmt("S_D %s %s %d %d", username.c_str(), fn.c_str(), i, SS);
             ip_port_send(ip_port[name].first, ip_port[name].second, cmd);
+            usleep(10000);
             printf("Download %s %d/%d from %s\n", fn.c_str(), i + 1, SS, name.c_str());
             sf_get[i].filename = strfmt("%s.%d", fn.c_str(), i);
             sf_get[i].tot_part = SS;
@@ -222,7 +223,6 @@ void service(string input) {
             sf_get[i].ip = ip_port[name].first;
             sf_get[i].port = 37778;
             pthread_create(&t1[i], NULL, get_file, (void*)&sf_get[i]);
-            usleep(10000);
         }
         cmd = "";
         FILE *fp = fopen(("Download/" + fn).c_str(), "wb");
