@@ -78,7 +78,7 @@ void *get_file(void *ptr) {
     int connfd = connect2fd(addr, sf.ip.c_str(), sf.port), yes = 1;
     read(connfd, recvline, MAXLINE);
     write(connfd, recvline, strlen(recvline));
-    int file_sz = atoi(recvline);
+    long long file_sz = atol(recvline);
     printf("Download %s started.\n", sf.filename.c_str());
 
     while (file_sz > 0) {
